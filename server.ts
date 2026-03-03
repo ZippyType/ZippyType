@@ -328,32 +328,42 @@ async function startServer() {
 
   // Pro Text Generation Endpoint
   app.post('/api/generate-pro-text', async (req, res) => {
-    const { difficulty, topic, problemKeys, textLength, language } = req.body;
+    const { difficulty, topic, problemKeys, textLength, language, isGuest } = req.body;
 
     try {
-      // Get an active token from Supabase
-      const { data: tokens, error } = await supabase
+      let tokensToTry = [];
+
+      // If it's a guest, prioritize GUEST_TOKEN if available
+      if (isGuest && process.env.GUEST_TOKEN) {
+        tokensToTry.push({ token_name: 'GUEST_TOKEN', value: process.env.GUEST_TOKEN });
+      }
+
+      // Get active tokens from Supabase
+      const { data: dbTokens, error } = await supabase
         .from('github_tokens')
         .select('*')
         .eq('status', 'active')
         .order('id', { ascending: true });
 
-      if (error || !tokens || tokens.length === 0) {
+      if (dbTokens) {
+        for (const t of dbTokens) {
+          const val = process.env[t.token_name] || process.env[t.token_name.toUpperCase()];
+          if (val) {
+            tokensToTry.push({ ...t, value: val });
+          } else {
+            // Mark as out if env var missing
+            await supabase.from('github_tokens').update({ status: 'out' }).eq('id', t.id);
+          }
+        }
+      }
+
+      if (tokensToTry.length === 0) {
         return res.status(500).json({ error: 'No active GitHub tokens available' });
       }
 
-      for (const tokenRow of tokens) {
-        // Try both the exact token name and the uppercase version (e.g. Github_tok_1 -> GITHUB_TOK_1)
-        const tokenValue = process.env[tokenRow.token_name] || process.env[tokenRow.token_name.toUpperCase()];
-        
-        if (!tokenValue) {
-          // If env var is missing, mark as out
-          await supabase.from('github_tokens').update({ status: 'out' }).eq('id', tokenRow.id);
-          continue;
-        }
-
+      for (const token of tokensToTry) {
         try {
-          const client = new OpenAI({ baseURL: "https://models.inference.ai.azure.com", apiKey: tokenValue });
+          const client = new OpenAI({ baseURL: "https://models.inference.ai.azure.com", apiKey: token.value });
           
           let lengthConstraint = "exactly 10 to 13 words total";
           if (textLength === 'short') lengthConstraint = "exactly 6 to 8 words total";
@@ -382,9 +392,11 @@ async function startServer() {
 
           return res.json({ text });
         } catch (e) {
-          console.error(`Token ${tokenRow.token_name} failed:`, e);
-          // Mark as out and try next
-          await supabase.from('github_tokens').update({ status: 'out' }).eq('id', tokenRow.id);
+          console.error(`Token ${token.token_name} failed:`, e);
+          // Mark as out and try next if it's a DB token
+          if (token.id) {
+            await supabase.from('github_tokens').update({ status: 'out' }).eq('id', token.id);
+          }
         }
       }
 

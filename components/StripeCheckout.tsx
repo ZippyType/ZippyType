@@ -167,7 +167,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({ clientSecret, mo
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <div className="space-y-1">
             <h3 className="text-lg font-black text-white tracking-tight">Secure Checkout</h3>
-            {memberCount !== null && (
+            {memberCount !== null && mode !== 'gift_card' && (
               <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">
                 You will be member #{formatMemberCount(memberCount + 1)}!
               </p>

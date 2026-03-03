@@ -17,7 +17,7 @@ import { supabase, saveUserPreferences, loadUserPreferences, checkIpSoloUsage, r
 import { saveZippyData, loadZippyData, ZippyStats } from './services/storageService';
 import StatsCard from './components/StatsCard';
 import HistoryChart from './components/HistoryChart';
-import SearchView from './components/SearchView';
+import ZippySearch from './components/SearchView';
 import KeyboardTester from './components/KeyboardTester';
 import TypingGuide from './components/TypingGuide';
 import PrivacyPolicy from './components/PrivacyPolicy';
@@ -842,7 +842,8 @@ const App: React.FC = () => {
                   difficulty: customDiff || difficulty, 
                   topic: seed || "General",
                   textLength,
-                  language: currentLang
+                  language: currentLang,
+                  isGuest: !user
                 })
               });
               if (!res.ok) {
@@ -1610,8 +1611,8 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
-          <nav className="flex items-center gap-4">
-            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/5 shadow-lg">
+          <nav className="flex items-center gap-4 w-full md:w-auto">
+            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/5 shadow-lg overflow-x-auto no-scrollbar max-w-full">
               <button onClick={() => { setActiveSettingsTab(null); setCurrentView(AppView.GAME); }} className={`p-3 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={20} /></button>
               <button onClick={() => { setActiveSettingsTab(null); setCurrentView(AppView.TUTORIALS); }} className={`p-3 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-amber-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Tactical Academy"><BookOpen size={20} /></button>
               <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-3 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
@@ -1644,15 +1645,11 @@ const App: React.FC = () => {
           </nav>
         </header>
 
-        {currentView === AppView.SEARCH && (
+        {currentView === AppView.SEARCH ? (
           <ZippySearch />
-        )}
-
-        {currentView === AppView.LEADERBOARD && (
+        ) : currentView === AppView.LEADERBOARD ? (
           <Leaderboard currentUser={user} userProfile={profile} />
-        )}
-
-        {currentView === AppView.PROFILE ? (
+        ) : currentView === AppView.PROFILE ? (
           <div className="glass rounded-[2rem] p-10 space-y-10 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl">
             <div className="flex items-center gap-3"><div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl"><User size={22} /></div><h2 className="text-base font-black text-white uppercase tracking-tighter">{EN.profileDetails}</h2></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -2090,8 +2087,6 @@ const App: React.FC = () => {
           </div>
         ) : currentView === AppView.HISTORY ? (
           <HistoryView history={history} speedUnit={speedUnit} problemKeys={problemKeys} isPro={profile.is_pro || false} onUpgradeClick={() => setShowProModal(true)} />
-        ) : currentView === AppView.SEARCH ? (
-          <SearchView />
         ) : currentView === AppView.TUTORIALS ? (
           <Tutorials />
         ) : currentView === AppView.PRIVACY ? (
