@@ -2378,6 +2378,14 @@ const App: React.FC = () => {
         >
            <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2]"></span> Discord
         </a>
+        <a 
+          href="https://x.com/ZippyType/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] font-bold text-white hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-2"
+        >
+           <span className="w-1.5 h-1.5 rounded-full bg-white"></span> Follow us on X
+        </a>
       </footer>
 
       {showLengthModal && (
