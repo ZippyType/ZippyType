@@ -235,26 +235,23 @@ export const incrementUsage = async (userId: string | null, isPro: boolean, isCu
 
 export const getDailyText = async (generator: () => Promise<string>): Promise<string> => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const { data, error } = await supabase
-      .from('daily')
-      .select('daily, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .from('daily_run')
+      .select('text')
+      .eq('date', today)
+      .maybeSingle();
 
-    if (data && data.length > 0) {
-      const lastCreated = new Date(data[0].created_at).toISOString().split('T')[0];
-      if (lastCreated === today) {
-        return data[0].daily;
-      }
+    if (data) {
+      return data.text;
     }
 
     // Generate new text
     const newText = await generator();
     
-    // Delete old entries and insert new one
-    await supabase.from('daily').delete().neq('daily', 'placeholder_to_ensure_delete_all');
-    await supabase.from('daily').insert({ daily: newText });
+    // Insert new one for today
+    await supabase.from('daily_run').insert({ date: today, text: newText });
 
     return newText;
   } catch (e) {
