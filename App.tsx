@@ -695,6 +695,36 @@ const App: React.FC = () => {
             } else {
               setProfile(prev => ({ ...prev, is_pro: isPro }));
             }
+
+            // Ensure username exists in public.usernames and sync to profile
+            try {
+              const { data: existing } = await supabase
+                .from('usernames')
+                .select('username')
+                .eq('user_id', newUser.id)
+                .maybeSingle();
+              
+              if (existing) {
+                setProfile(prev => ({ ...prev, handle: existing.username }));
+              } else if (newUser.email) {
+                let baseUsername = newUser.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                let finalUsername = baseUsername;
+                
+                // Try to insert, if fails (duplicate), add random numbers
+                const { error: insertErr } = await supabase
+                  .from('usernames')
+                  .insert({ user_id: newUser.id, username: finalUsername });
+                
+                if (insertErr && insertErr.code === '23505') {
+                  finalUsername = `${baseUsername}${Math.floor(Math.random() * 1000)}`;
+                  await supabase.from('usernames').insert({ user_id: newUser.id, username: finalUsername });
+                }
+                setProfile(prev => ({ ...prev, handle: finalUsername }));
+              }
+            } catch (e) {
+              console.error("Username sync failed:", e);
+            }
+
             fetchHistory(newUser.id);
             setHasUsedSolo(null);
             initializeUserCredits(newUser.id);

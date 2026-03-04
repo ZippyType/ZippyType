@@ -10,6 +10,7 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onClose }) => {
   const [isLogin, setIsLogin] = useState(false);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
@@ -54,12 +55,27 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
 
       const authPromise = isLogin 
         ? supabase.auth.signInWithPassword({ email, password })
-        : supabase.auth.signUp({ email, password });
+        : supabase.auth.signUp({ 
+            email, 
+            password,
+            options: {
+              data: {
+                username: username
+              }
+            }
+          });
 
       const authResponse = await Promise.race([authPromise, timeout]);
       
       // @ts-ignore
       if (authResponse.error) throw authResponse.error;
+
+      // Handle username insertion for email signup
+      // @ts-ignore
+      const user = authResponse.data?.user;
+      if (!isLogin && user && username) {
+        await supabase.from('usernames').insert({ user_id: user.id, username: username });
+      }
 
       // @ts-ignore
       if (stayLoggedIn && authResponse.data?.user) {
@@ -117,6 +133,24 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
               <div className="absolute inset-0 border-2 border-indigo-500 rounded-xl scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300 origin-center z-0" />
             </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300 relative group">
+              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-2 block">Username</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-4 px-6 text-white focus:outline-none transition-all font-sans text-xs shadow-inner relative z-10"
+                  placeholder="cool_pilot_123"
+                  maxLength={20}
+                />
+                <div className="absolute inset-0 border-2 border-indigo-500 rounded-xl scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300 origin-center z-0" />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2 relative group">
             <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-2 block">Password</label>

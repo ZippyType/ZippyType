@@ -78,6 +78,7 @@ export interface Quest {
 
 export interface UserProfile {
   username: string;
+  handle?: string;
   avatar: string;
   accentColor: string;
   theme?: string;

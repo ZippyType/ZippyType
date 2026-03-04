@@ -6,6 +6,7 @@ import { UserProfile } from '../types';
 interface LeaderboardEntry {
   user_id: string;
   username: string;
+  handle?: string;
   score: number;
   rank?: number;
 }
@@ -29,7 +30,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
       setLoading(true);
       const { data, error } = await supabase
         .from('leaderboard')
-        .select('*')
+        .select('*, usernames(username)')
         .order('score', { ascending: false })
         .limit(100);
 
@@ -37,9 +38,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
 
       if (data) {
         // Add rank
-        const rankedData = data.map((entry, index) => ({
+        const rankedData = data.map((entry: any, index: number) => ({
           ...entry,
-          rank: index + 1
+          rank: index + 1,
+          handle: entry.usernames?.username || 'unknown'
         }));
         setEntries(rankedData);
 
@@ -146,6 +148,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
                           <User size={16} />
                         </div>
                         <span className={`font-bold ${entry.user_id === currentUser?.id ? 'text-indigo-400' : 'text-slate-200'}`}>
+                          <span className="text-slate-500 font-mono mr-2">@{entry.handle}</span>
+                          <span className="opacity-50 mx-2">|</span>
                           {entry.username}
                         </span>
                         {entry.user_id === currentUser?.id && (

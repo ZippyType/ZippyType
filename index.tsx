@@ -34,9 +34,10 @@ const Fallback = ({ error, resetErrorBoundary }: any) => {
     const isPro = profile.is_pro ? "am" : "am not";
     const theme = profile.theme || "Default";
     const displayName = profile.username || "Unknown";
+    const handle = profile.handle ? `@${profile.handle}` : "Unknown";
     
-    const body = `I was viewing ${page} and I got this error: '${errorMsg}'. Please fix this as soon as possible I ${isPro} a ZippyType Pro user, and my theme was ${theme}. My UUID is ${uuid}, my display name is ${displayName} and my email is ${email}`;
-    return `mailto:zippytype@googlegroups.com?subject=ZippyType%20code%20issue&body=${encodeURIComponent(body)}`;
+    const body = `I was viewing ${page} and I got this error: '${errorMsg}'. Please fix this as soon as possible. I ${isPro} a ZippyType Pro user, and my theme was ${theme}. My UUID is ${uuid}, my display name is ${displayName} (${handle}), and my email is ${email}.`;
+    return `mailto:zippytype@googlegroups.com?subject=ZippyType%20Error%20Report%20[${uuid}]&body=${encodeURIComponent(body)}`;
   };
 
   return (
