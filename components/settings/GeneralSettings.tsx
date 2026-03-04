@@ -15,6 +15,14 @@ interface GeneralSettingsProps {
   userId?: string;
   discordId?: string;
   onDiscordLinked?: (id: string) => void;
+  zenMode: boolean;
+  setZenMode: (v: boolean) => void;
+  focusPenalty: boolean;
+  setFocusPenalty: (v: boolean) => void;
+  ghostRacing: boolean;
+  setGhostRacing: (v: boolean) => void;
+  showHeatmap: boolean;
+  setShowHeatmap: (v: boolean) => void;
 }
 
 const languages = [
@@ -37,7 +45,15 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setSfxVolume,
   userId,
   discordId,
-  onDiscordLinked
+  onDiscordLinked,
+  zenMode,
+  setZenMode,
+  focusPenalty,
+  setFocusPenalty,
+  ghostRacing,
+  setGhostRacing,
+  showHeatmap,
+  setShowHeatmap
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
@@ -148,16 +164,75 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
         <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
           <Volume2 size={14} className="text-indigo-400" /> {t('soundProfile')}
         </h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {Object.values(SoundProfile).map(p => (
             <button
               key={p}
               onClick={() => setSoundProfile(p)}
-              className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${soundProfile === p ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg' : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10'}`}
+              className={`py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${soundProfile === p ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg' : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10'}`}
             >
-              {p}
+              {p.replace('_', ' ')}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="p-6 glass border border-white/10 rounded-2xl space-y-4">
+        <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+          <Sparkles size={14} className="text-amber-400" /> Game Experience
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Zen Mode</span>
+              <p className="text-[9px] text-slate-500">Hide UI elements during race</p>
+            </div>
+            <button 
+              onClick={() => setZenMode(!zenMode)}
+              className={`w-10 h-5 rounded-full transition-all relative ${zenMode ? 'bg-indigo-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${zenMode ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Focus Penalty</span>
+              <p className="text-[9px] text-slate-500">Shake screen on low accuracy</p>
+            </div>
+            <button 
+              onClick={() => setFocusPenalty(!focusPenalty)}
+              className={`w-10 h-5 rounded-full transition-all relative ${focusPenalty ? 'bg-rose-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${focusPenalty ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Ghost Racing</span>
+              <p className="text-[9px] text-slate-500">Race against your personal best</p>
+            </div>
+            <button 
+              onClick={() => setGhostRacing(!ghostRacing)}
+              className={`w-10 h-5 rounded-full transition-all relative ${ghostRacing ? 'bg-emerald-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${ghostRacing ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Interactive Heatmap</span>
+              <p className="text-[9px] text-slate-500">Show key speed data in stats</p>
+            </div>
+            <button 
+              onClick={() => setShowHeatmap(!showHeatmap)}
+              className={`w-10 h-5 rounded-full transition-all relative ${showHeatmap ? 'bg-purple-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${showHeatmap ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
         </div>
       </div>
 

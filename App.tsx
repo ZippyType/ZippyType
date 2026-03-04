@@ -5,11 +5,11 @@ import {
   Trophy, Zap, Target, RotateCcw, Play, Rocket, Settings as SettingsIcon,
   Gamepad2, LogOut, X, Volume2, VolumeX, Github, Globe, User, EyeOff, Eye, 
   Activity, Dna, Clock, Lock, ShieldAlert, AlertCircle, Timer, Download, Upload, FileJson,
-  BookOpen, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search,
-  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown
+  BookOpen, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search, FileText,
+  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users
 } from 'lucide-react';
 import { useTranslation } from './src/LanguageContext';
-import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout } from './types';
+import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement } from './types';
 import { fetchTypingText } from './services/geminiService';
 import { fetchGithubTypingText } from './services/githubService';
 import { getCoachReport } from './services/coachService';
@@ -34,6 +34,10 @@ import GeneralSettings from './components/settings/GeneralSettings';
 import { motion, AnimatePresence } from 'motion/react';
 import { StripeCheckout } from './components/StripeCheckout';
 import HistoryView from './components/HistoryView';
+import WeeklyReport from './components/WeeklyReport';
+import KeyHeatmap from './components/KeyHeatmap';
+import Matchmaking from './components/Matchmaking';
+import MultiplayerRace from './components/MultiplayerRace';
 import MultiplayerLobby from './components/MultiplayerLobby';
 import confetti from 'canvas-confetti';
 
@@ -187,7 +191,14 @@ const App: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [musicVolume, setMusicVolume] = useState(() => Number(localStorage.getItem('music_volume') || '0.15'));
   const [sfxVolume, setSfxVolume] = useState(() => Number(localStorage.getItem('sfx_volume') || '0.8'));
-  const [isZen, setIsZen] = useState(false);
+  const [isZen, setIsZen] = useState(() => localStorage.getItem('zen_mode') === 'true');
+  const [focusPenalty, setFocusPenalty] = useState(() => localStorage.getItem('focus_penalty') === 'true');
+  const [ghostRacing, setGhostRacing] = useState(() => localStorage.getItem('ghost_racing') === 'true');
+  const [showHeatmap, setShowHeatmap] = useState(() => localStorage.getItem('show_heatmap') === 'true');
+  const [ghostProgress, setGhostProgress] = useState(0);
+  const [personalBest, setPersonalBest] = useState<number>(0);
+  const [keySpeeds, setKeySpeeds] = useState<Record<string, number[]>>({});
+  const lastKeyTime = useRef<number | null>(null);
   const [showGuide, setShowGuide] = useState(true);
   const [hasUsedSolo, setHasUsedSolo] = useState<boolean | null>(null);
   const [showProModal, setShowProModal] = useState(false);
@@ -310,6 +321,10 @@ const App: React.FC = () => {
 
   // Neuro-Adaptive State (Problem Keys)
   const [customTopic, setCustomTopic] = useState("");
+  const [customRawText, setCustomRawText] = useState("");
+  const [showCustomTextModal, setShowCustomTextModal] = useState(false);
+  const [isMatchmaking, setIsMatchmaking] = useState(false);
+  const [currentMatch, setCurrentMatch] = useState<{ roomId: string, opponent: any } | null>(null);
   const [currentText, setCurrentText] = useState("");
   const [displayedText, setDisplayedText] = useState("");
   const [userInput, setUserInput] = useState("");
@@ -335,15 +350,50 @@ const App: React.FC = () => {
   const [streak, setStreak] = useState(0);
   const [players, setPlayers] = useState<PlayerState[]>([]);
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [roomRegion, setRoomRegion] = useState<'global' | 'local'>('global');
   const [hostId, setHostId] = useState<string | null>(null);
   const [joinRoomId, setJoinRoomId] = useState("");
   const [isShaking, setIsShaking] = useState(false);
-  const [isReady, setIsReady] = useState(false);
+  const [achievements, setAchievements] = useState<Achievement[]>(() => {
+    try {
+      const saved = localStorage.getItem('zippy_achievements');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      { id: 'first_race', title: 'First Steps', description: 'Complete your first typing race', icon: '🏁' },
+      { id: 'speed_demon_50', title: 'Speed Demon I', description: 'Reach 50 WPM', icon: '🔥' },
+      { id: 'speed_demon_100', title: 'Speed Demon II', description: 'Reach 100 WPM', icon: '⚡' },
+      { id: 'perfect_accuracy', title: 'Sniper', description: 'Complete a race with 100% accuracy', icon: '🎯' },
+      { id: 'marathoner', title: 'Marathoner', description: 'Type 1000 words in total', icon: '🏃' }
+    ];
+  });
   const [easterEggTriggered, setEasterEggTriggered] = useState(false);
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'playing' | 'finished'>('waiting');
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
-  const channelRef = useRef<any>(null);
+  const checkAchievements = (result: TypingResult) => {
+    let updated = false;
+    const newAchievements = achievements.map(a => {
+      if (a.unlockedAt) return a;
+      
+      let unlocked = false;
+      if (a.id === 'first_race') unlocked = true;
+      if (a.id === 'speed_demon_50' && result.wpm >= 50) unlocked = true;
+      if (a.id === 'speed_demon_100' && result.wpm >= 100) unlocked = true;
+      if (a.id === 'perfect_accuracy' && result.accuracy === 100) unlocked = true;
+      
+      if (unlocked) {
+        updated = true;
+        return { ...a, unlockedAt: new Date().toISOString() };
+      }
+      return a;
+    });
+
+    if (updated) {
+      setAchievements(newAchievements);
+      localStorage.setItem('zippy_achievements', JSON.stringify(newAchievements));
+    }
+  };
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -852,6 +902,11 @@ const App: React.FC = () => {
       const seed = customTopic;
       
       const generator = async () => {
+        if (gameMode === GameMode.CUSTOM_TEXT) {
+          if (!customRawText.trim()) throw new Error("Please enter some text to practice.");
+          return customRawText;
+        }
+
         // Use server-side generation for Pro users OR Guest users
         // This allows them to use high-quality models (GPT-4o) via GUEST_TOKEN or our pooled tokens
         if (profile.is_pro || !user) {
@@ -1037,6 +1092,21 @@ const App: React.FC = () => {
     if (!isActive || loading || isTypingOut) return;
     if (!startTime) setStartTime(Date.now());
     const val = normalizeText(e.target.value);
+    
+    // Key Speed Tracking
+    const now = Date.now();
+    if (lastKeyTime.current && val.length > userInput.length) {
+      const diff = now - lastKeyTime.current;
+      const char = currentText[val.length - 1];
+      if (char) {
+        setKeySpeeds(prev => {
+          const existing = prev[char] || [];
+          return { ...prev, [char]: [...existing, diff].slice(-10) };
+        });
+      }
+    }
+    lastKeyTime.current = now;
+
     if (val.length < userInput.length) {
       setTotalKeys(prev => prev + 1); setUserInput(val);
       setPlayers(prev => prev.map(p => { if (p.id === 'me') return { ...p, index: val.length }; return p; }));
@@ -1050,6 +1120,13 @@ const App: React.FC = () => {
         const nextCorrectKeys = correctKeys + 1;
         setCorrectKeys(nextCorrectKeys);
         
+        // Focus Penalty: Shake if accuracy is low
+        const currentAcc = (nextCorrectKeys / (totalKeys + 1)) * 100;
+        if (focusPenalty && currentAcc < 95) {
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 200);
+        }
+
         if (val[val.length - 1] === ' ') {
           setStreak(s => { const ns = s + 1; if (ns % 8 === 0) awardPowerUp(); return ns; });
           if (gameMode === GameMode.BEAT_THE_CLOCK) {
@@ -1120,19 +1197,40 @@ const App: React.FC = () => {
     }
   };
 
-  const completeRace = async () => {
+  const completeRace = async (
+    overrideWpm?: number, 
+    overrideAccuracy?: number, 
+    overrideTime?: number, 
+    overrideMode?: GameMode
+  ) => {
     setIsActive(false); playSound('finish');
-    const duration = (gameMode === GameMode.TIME_ATTACK || gameMode === GameMode.BEAT_THE_CLOCK) ? 60 : elapsedTime;
-    const wpm = Math.round(currentWpmDisplay); const accuracy = Math.round(currentAccuracyDisplay);
+    const duration = overrideTime ?? ((gameMode === GameMode.TIME_ATTACK || gameMode === GameMode.BEAT_THE_CLOCK) ? 60 : elapsedTime);
+    const wpm = overrideWpm ?? Math.round(currentWpmDisplay); 
+    const accuracy = overrideAccuracy ?? Math.round(currentAccuracyDisplay);
+    const mode = overrideMode ?? gameMode;
 
     if (user) {
-      const pbKey = `pb_${difficulty}_${gameMode}`;
+      const pbKey = `pb_${difficulty}_${mode}`;
       const currentPb = parseInt(localStorage.getItem(pbKey) || '0');
       if (wpm > currentPb) localStorage.setItem(pbKey, wpm.toString());
       const note = await getCoachReport(provider, githubToken, wpm, accuracy, errors, Object.keys(errorMap));
-      const result: TypingResult = { id: Date.now().toString(), date: new Date().toISOString(), wpm, accuracy, time: duration, errors, difficulty, mode: gameMode, textLength: currentText.length, errorMap, coachNote: note };
+      const result: TypingResult = { 
+        id: Date.now().toString(), 
+        date: new Date().toISOString(), 
+        wpm, 
+        accuracy, 
+        time: duration, 
+        errors, 
+        difficulty, 
+        mode: mode, 
+        textLength: currentText.length, 
+        errorMap, 
+        keySpeeds,
+        coachNote: note 
+      };
       await saveHistory(user.id, result);
       setHistory(prev => [result, ...prev].slice(0, 50));
+      checkAchievements(result);
 
       // Update Leaderboard Score
       const scoreIncrement = Math.max(0, currentText.length - errors);
@@ -1147,7 +1245,7 @@ const App: React.FC = () => {
           console.error("Failed to update leaderboard:", err);
         }
       }
-    } else if (gameMode === GameMode.SOLO) {
+    } else if (mode === GameMode.SOLO) {
       try { await recordIpSoloUsage(); setHasUsedSolo(true); } catch (err) {}
     }
 
@@ -1310,13 +1408,13 @@ const App: React.FC = () => {
         bgmGain.linearRampToValueAtTime(0.15, now + 0.3);
       }
 
-      if (soundProfile === SoundProfile.MECHANICAL) {
+      if (soundProfile === SoundProfile.MECHANICAL_BLUE || soundProfile === SoundProfile.MECHANICAL_BROWN || soundProfile === SoundProfile.MECHANICAL_RED) {
         if (type === 'click' || type === 'correct') {
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(120, now);
-          gain.gain.setValueAtTime(0.04, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-          osc.start(now); osc.stop(now + 0.08);
+          osc.type = soundProfile === SoundProfile.MECHANICAL_BLUE ? 'square' : soundProfile === SoundProfile.MECHANICAL_BROWN ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(soundProfile === SoundProfile.MECHANICAL_BLUE ? 180 : soundProfile === SoundProfile.MECHANICAL_BROWN ? 140 : 110, now);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.start(now); osc.stop(now + 0.1);
         } else if (type === 'error') {
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(80, now);
@@ -1796,6 +1894,30 @@ const App: React.FC = () => {
               </div>
               <div className="space-y-5"><label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em]">Avatar</label><div className="grid grid-cols-5 gap-4">{AVATARS.map(v => (<button key={v} onClick={() => setProfile({...profile, avatar: v})} className={`text-2xl p-4 rounded-xl border-2 transition-all hover:scale-110 ${profile.avatar === v ? 'border-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/10' : 'border-white/5 bg-black/50 opacity-30 hover:opacity-100'}`}>{v}</button>))}</div></div>
             </div>
+
+            <div className="space-y-6 pt-6 border-t border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl"><Trophy size={22} /></div>
+                <h2 className="text-base font-black text-white uppercase tracking-tighter">Achievements</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {achievements.map(a => (
+                  <div 
+                    key={a.id} 
+                    className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${a.unlockedAt ? 'bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5' : 'bg-black/20 border-white/5 opacity-40 grayscale'}`}
+                  >
+                    <div className="text-3xl">{a.icon}</div>
+                    <div>
+                      <h4 className="text-[11px] font-black text-white uppercase tracking-widest leading-none mb-1">{a.title}</h4>
+                      <p className="text-[9px] text-slate-500 font-bold">{a.description}</p>
+                      {a.unlockedAt && (
+                        <p className="text-[8px] text-amber-400/60 mt-1 uppercase font-black">Unlocked {new Date(a.unlockedAt).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : currentView === AppView.SETTINGS ? (
           <div className="space-y-8 animate-in zoom-in-95 duration-300">
@@ -1919,16 +2041,24 @@ const App: React.FC = () => {
                 {activeSettingsTab === 'general' && (
                   <GeneralSettings 
                     soundProfile={soundProfile}
-                    setSoundProfile={setSoundProfile}
+                    setSoundProfile={(p) => { setSoundProfile(p); localStorage.setItem('sound_profile', p); }}
                     keyboardLayout={keyboardLayout}
-                    setKeyboardLayout={setKeyboardLayout}
+                    setKeyboardLayout={(l) => { setKeyboardLayout(l); localStorage.setItem('keyboard_layout', l); }}
                     musicVolume={musicVolume}
-                    setMusicVolume={setMusicVolume}
+                    setMusicVolume={(v) => { setMusicVolume(v); localStorage.setItem('music_volume', v.toString()); }}
                     sfxVolume={sfxVolume}
-                    setSfxVolume={setSfxVolume}
+                    setSfxVolume={(v) => { setSfxVolume(v); localStorage.setItem('sfx_volume', v.toString()); }}
                     userId={user?.id}
                     discordId={profile.discord_id}
                     onDiscordLinked={(id) => setProfile(prev => ({ ...prev, discord_id: id }))}
+                    zenMode={isZen}
+                    setZenMode={(v) => { setIsZen(v); localStorage.setItem('zen_mode', v.toString()); }}
+                    focusPenalty={focusPenalty}
+                    setFocusPenalty={(v) => { setFocusPenalty(v); localStorage.setItem('focus_penalty', v.toString()); }}
+                    ghostRacing={ghostRacing}
+                    setGhostRacing={(v) => { setGhostRacing(v); localStorage.setItem('ghost_racing', v.toString()); }}
+                    showHeatmap={showHeatmap}
+                    setShowHeatmap={(v) => { setShowHeatmap(v); localStorage.setItem('show_heatmap', v.toString()); }}
                   />
                 )}
 
@@ -2110,7 +2240,10 @@ const App: React.FC = () => {
             )}
           </div>
         ) : currentView === AppView.HISTORY ? (
-          <HistoryView history={history} speedUnit={speedUnit} problemKeys={problemKeys} isPro={profile.is_pro || false} onUpgradeClick={() => setShowProModal(true)} />
+          <div className="space-y-8 animate-in zoom-in-95 duration-300">
+            <WeeklyReport history={history} />
+            <HistoryView history={history} speedUnit={speedUnit} problemKeys={problemKeys} isPro={profile.is_pro || false} onUpgradeClick={() => setShowProModal(true)} />
+          </div>
         ) : currentView === AppView.TUTORIALS ? (
           <Tutorials />
         ) : currentView === AppView.PRIVACY ? (
@@ -2122,6 +2255,19 @@ const App: React.FC = () => {
           <div className="w-full h-screen flex items-center justify-center">
             <OAuthCallback />
           </div>
+        ) : currentMatch ? (
+          <MultiplayerRace 
+            roomId={currentMatch.roomId}
+            userId={user?.id || 'guest'}
+            username={profile.username}
+            opponent={currentMatch.opponent}
+            text={currentText}
+            onComplete={(res) => {
+              completeRace(res.wpm, res.accuracy, res.time, GameMode.COMPETITIVE);
+              setCurrentMatch(null);
+            }}
+            onQuit={() => setCurrentMatch(null)}
+          />
         ) : (
           <div className="space-y-8">
             <div className="flex flex-col gap-6 items-center w-full">
@@ -2130,11 +2276,12 @@ const App: React.FC = () => {
                   {[
                     { mode: GameMode.SOLO, label: EN.gameModeSolo, desc: EN.gameModeSoloDesc, icon: <User /> },
                     { mode: GameMode.TIME_ATTACK, label: EN.gameModeTimeAttack, desc: EN.gameModeTimeAttackDesc, icon: <Timer /> },
-                    { mode: GameMode.COMPETITIVE, label: EN.gameModeCompetitive, desc: EN.gameModeCompetitiveDesc, icon: <Trophy /> },
                     { mode: GameMode.DAILY, label: EN.gameModeDaily, desc: EN.gameModeDailyDesc, icon: <Sparkles /> },
                     { mode: GameMode.BEAT_THE_CLOCK, label: EN.gameModeBeatClock, desc: EN.gameModeBeatClockDesc, icon: <Clock /> },
                     { mode: GameMode.ACCURACY_CHALLENGE, label: EN.gameModeAccuracy, desc: EN.gameModeAccuracyDesc, icon: <Target /> },
-                    { mode: GameMode.WPM_RACE, label: EN.gameModeWpmRace, desc: EN.gameModeWpmRaceDesc, icon: <Zap /> }
+                    { mode: GameMode.WPM_RACE, label: EN.gameModeWpmRace, desc: EN.gameModeWpmRaceDesc, icon: <Zap /> },
+                    { mode: GameMode.CUSTOM_TEXT, label: "Custom Text", desc: "Practice with your own text", icon: <FileText /> },
+                    { mode: GameMode.COMPETITIVE, label: "Live 1v1", desc: "Race against real players", icon: <Users /> }
                   ].map((m) => {
                     const isLocked = !user && (m.mode !== GameMode.SOLO || hasUsedSolo);
                     return (
@@ -2143,7 +2290,18 @@ const App: React.FC = () => {
                         whileHover={{ scale: 1.02, translateY: -2 }}
                         whileTap={{ scale: 0.98 }}
                         disabled={isLocked && isActive}
-                        onClick={() => { if (isLocked) { setShowRestrictedModal(true); } else { setGameMode(m.mode); resetGameStats(); } }}
+                        onClick={() => { 
+                          if (isLocked) { 
+                            setShowRestrictedModal(true); 
+                          } else if (m.mode === GameMode.CUSTOM_TEXT) {
+                            setShowCustomTextModal(true);
+                          } else if (m.mode === GameMode.COMPETITIVE) {
+                            setIsMatchmaking(true);
+                          } else { 
+                            setGameMode(m.mode); 
+                            resetGameStats(); 
+                          } 
+                        }}
                         className={`relative w-48 p-4 rounded-2xl border transition-all text-left group overflow-hidden flex-shrink-0 ${gameMode === m.mode ? 'glass border-indigo-500/50 shadow-lg' : 'bg-black/20 border-white/5 hover:border-white/10'}`}
                       >
                         <div className={`absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
@@ -2386,11 +2544,14 @@ const App: React.FC = () => {
         >
            <span className="w-1.5 h-1.5 rounded-full bg-white"></span> Follow us on X
         </a>
+        <a href="https://www.buymeacoffee.com/zippytype" target="_blank" rel="noopener noreferrer">
+          <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=zippytype&button_colour=FF5F5F&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" alt="Buy Me A Coffee" />
+        </a>
       </footer>
 
       {showLengthModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-sm bg-[#0f172a] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
+          <div className="w-full max-sm bg-[#0f172a] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-indigo-500 rounded-t-[2.5rem]" />
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-sm font-black text-white uppercase tracking-widest">Text Length</h3>
@@ -2420,6 +2581,57 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showCustomTextModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="w-full max-w-lg bg-[#0f172a] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-emerald-500 rounded-t-[2.5rem]" />
+            <div className="flex justify-between items-center mb-6">
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest">Custom Practice Text</h3>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">Paste your own text or code to practice</p>
+              </div>
+              <button onClick={() => setShowCustomTextModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <textarea 
+              value={customRawText}
+              onChange={(e) => setCustomRawText(e.target.value)}
+              placeholder="Paste your text here..."
+              className="w-full h-48 bg-black/40 border border-white/10 rounded-2xl p-6 text-white font-mono text-sm focus:border-emerald-500 transition-all outline-none resize-none mb-6"
+            />
+            <button 
+              onClick={() => {
+                if (customRawText.trim()) {
+                  setGameMode(GameMode.CUSTOM_TEXT);
+                  setShowCustomTextModal(false);
+                  startGame();
+                }
+              }}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-xl uppercase tracking-widest text-[10px]"
+            >
+              Start Custom Practice
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isMatchmaking && (
+        <Matchmaking 
+          userId={user?.id || 'guest'}
+          username={profile.username}
+          onMatchFound={(roomId, opponent) => {
+            setCurrentMatch({ roomId, opponent });
+            setIsMatchmaking(false);
+            // Generate text for the match
+            fetchTypingText(Difficulty.MEDIUM, "General", undefined, [], 'medium', currentLang).then(text => {
+              setCurrentText(text);
+            });
+          }}
+          onCancel={() => setIsMatchmaking(false)}
+        />
       )}
 
       {showSubscription && clientSecret && (

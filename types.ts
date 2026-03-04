@@ -14,7 +14,8 @@ export enum GameMode {
   DAILY = 'daily',
   BEAT_THE_CLOCK = 'beat_the_clock',
   ACCURACY_CHALLENGE = 'accuracy_challenge',
-  WPM_RACE = 'wpm_race'
+  WPM_RACE = 'wpm_race',
+  CUSTOM_TEXT = 'custom_text'
 }
 
 export enum CompetitiveType {
@@ -48,8 +49,11 @@ export enum AppView {
 
 export enum SoundProfile {
   CLASSIC = 'classic',
-  MECHANICAL = 'mechanical',
-  SYNTH = 'synth'
+  MECHANICAL_BLUE = 'mechanical_blue',
+  MECHANICAL_BROWN = 'mechanical_brown',
+  MECHANICAL_RED = 'mechanical_red',
+  SYNTH = 'synth',
+  SILENT = 'silent'
 }
 
 export enum KeyboardLayout {
@@ -91,6 +95,10 @@ export interface UserPreferences {
   sound_profile?: SoundProfile;
   keyboard_layout?: KeyboardLayout;
   speed_unit?: 'wpm' | 'cpm';
+  zen_mode?: boolean;
+  focus_penalty?: boolean;
+  ghost_racing?: boolean;
+  show_heatmap?: boolean;
 }
 
 export interface PowerUp {
@@ -112,7 +120,16 @@ export interface TypingResult {
   mode: GameMode;
   textLength: number;
   errorMap?: Record<string, number>;
+  keySpeeds?: Record<string, number[]>;
   coachNote?: string;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlockedAt?: string;
 }
 
 export interface PlayerState {
