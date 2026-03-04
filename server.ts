@@ -328,7 +328,7 @@ async function startServer() {
 
   // Pro Text Generation Endpoint
   app.post('/api/generate-pro-text', async (req, res) => {
-    const { difficulty, topic, problemKeys, textLength, language, isGuest } = req.body;
+    const { difficulty, topic, problemKeys, textLength, language, isGuest, mode } = req.body;
 
     try {
       let tokensToTry = [];
@@ -365,17 +365,27 @@ async function startServer() {
         try {
           const client = new OpenAI({ baseURL: "https://models.inference.ai.azure.com", apiKey: token.value });
           
-          let lengthConstraint = "exactly 10 to 13 words total";
-          if (textLength === 'short') lengthConstraint = "exactly 6 to 8 words total";
-          else if (textLength === 'long') lengthConstraint = "exactly 20 to 25 words total";
+          let prompt = "";
+          
+          if (mode === 'code') {
+             const lang = ['javascript', 'python', 'typescript', 'java', 'c++'][Math.floor(Math.random() * 5)];
+             prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet. 
+             It should be approximately ${textLength === 'short' ? '2-3' : textLength === 'medium' ? '4-6' : '8-12'} lines of code.
+             Do not include comments. Do not include markdown code blocks. Just the raw code.
+             Ensure indentation is consistent (2 or 4 spaces).`;
+          } else {
+            let lengthConstraint = "exactly 10 to 13 words total";
+            if (textLength === 'short') lengthConstraint = "exactly 6 to 8 words total";
+            else if (textLength === 'long') lengthConstraint = "exactly 20 to 25 words total";
 
-          let prompt = `Generate a single ${difficulty} level typing practice sentence. `;
-          if (topic && topic !== "General") prompt += `The topic should be about: ${topic}. `;
-          if (language) prompt += `The language MUST be: ${language}. `;
-          if (problemKeys && problemKeys.length > 0) {
-            prompt += `The text MUST frequently use these specific characters: ${problemKeys.join(', ')}. `;
+            prompt = `Generate a single ${difficulty} level typing practice sentence. `;
+            if (topic && topic !== "General") prompt += `The topic should be about: ${topic}. `;
+            if (language) prompt += `The language MUST be: ${language}. `;
+            if (problemKeys && problemKeys.length > 0) {
+              prompt += `The text MUST frequently use these specific characters: ${problemKeys.join(', ')}. `;
+            }
+            prompt += `CRITICAL: The text MUST be ${lengthConstraint}. Count the words carefully. Return ONLY the text itself.`;
           }
-          prompt += `CRITICAL: The text MUST be ${lengthConstraint}. Count the words carefully. Return ONLY the text itself.`;
 
           const response = await client.chat.completions.create({
             messages: [
@@ -406,9 +416,17 @@ async function startServer() {
       if (process.env.GEMINI_API_KEY) {
         try {
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          let prompt = "";
+          if (mode === 'code') {
+             const lang = ['javascript', 'python', 'typescript', 'java', 'c++'][Math.floor(Math.random() * 5)];
+             prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet. Length: ${textLength === 'short' ? '2-3 lines' : '4-6 lines'}. No markdown.`;
+          } else {
+             prompt = `Generate a single ${difficulty} level typing practice sentence about "${topic || 'General'}". Language: ${language || 'en'}. Length: ${textLength === 'short' ? '6-8 words' : textLength === 'long' ? '20-25 words' : '10-13 words'}. Return ONLY the text.`;
+          }
+          
           const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: `Generate a single ${difficulty} level typing practice sentence about "${topic || 'General'}". Language: ${language || 'en'}. Length: ${textLength === 'short' ? '6-8 words' : textLength === 'long' ? '20-25 words' : '10-13 words'}. Return ONLY the text.`,
+            contents: prompt,
           });
           if (response.text) {
             return res.json({ text: response.text.trim() });

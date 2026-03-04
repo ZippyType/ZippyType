@@ -23,6 +23,13 @@ interface GeneralSettingsProps {
   setGhostRacing: (v: boolean) => void;
   showHeatmap: boolean;
   setShowHeatmap: (v: boolean) => void;
+  blindMode: boolean;
+  setBlindMode: (v: boolean) => void;
+  streamerMode: boolean;
+  setStreamerMode: (v: boolean) => void;
+  triggerError: () => void;
+  triggerPayment: () => void;
+  resetTutorial: () => void;
 }
 
 const languages = [
@@ -53,11 +60,30 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   ghostRacing,
   setGhostRacing,
   showHeatmap,
-  setShowHeatmap
+  setShowHeatmap,
+  blindMode,
+  setBlindMode,
+  streamerMode,
+  setStreamerMode,
+  triggerError,
+  triggerPayment,
+  resetTutorial
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
   const [isLinkingDiscord, setIsLinkingDiscord] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const [showDevSettings, setShowDevSettings] = useState(false);
+
+  const handleInvisibleClick = () => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+    if (newCount >= 5) {
+      setShowDevSettings(true);
+      setClickCount(0);
+    }
+    setTimeout(() => setClickCount(0), 1000);
+  };
 
   const currentLangLabel = languages.find(l => l.code === currentLang)?.label || 'English';
 
@@ -233,6 +259,32 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${showHeatmap ? 'left-6' : 'left-1'}`} />
             </button>
           </div>
+
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Blind Mode</span>
+              <p className="text-[9px] text-slate-500">Text fades out as you type</p>
+            </div>
+            <button 
+              onClick={() => setBlindMode(!blindMode)}
+              className={`w-10 h-5 rounded-full transition-all relative ${blindMode ? 'bg-red-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${blindMode ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Streamer Mode</span>
+              <p className="text-[9px] text-slate-500">Hide sensitive information</p>
+            </div>
+            <button 
+              onClick={() => setStreamerMode(!streamerMode)}
+              className={`w-10 h-5 rounded-full transition-all relative ${streamerMode ? 'bg-blue-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${streamerMode ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -277,7 +329,10 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
         </div>
       </div>
 
-      <div className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl space-y-2">
+      <div 
+        onClick={handleInvisibleClick}
+        className="p-6 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl space-y-2 cursor-pointer"
+      >
         <div className="flex items-center gap-2 text-indigo-400">
           <Sparkles size={14} />
           <span className="text-[10px] font-black uppercase tracking-widest">{t('secretTip')}</span>
@@ -286,6 +341,21 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           {t('secretTipDesc')}
         </p>
       </div>
+
+      {showDevSettings && (
+        <div className="p-6 glass border border-rose-500/20 rounded-2xl space-y-4 animate-in zoom-in-95 duration-300">
+          <h3 className="text-xs font-black text-rose-400 uppercase tracking-widest">Developer Settings</h3>
+          <button onClick={triggerError} className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all">
+            Trigger "Something went wrong"
+          </button>
+          <button onClick={triggerPayment} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all">
+            Trigger Test Payment
+          </button>
+          <button onClick={resetTutorial} className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all">
+            Reset Tutorial
+          </button>
+        </div>
+      )}
 
       {showLangModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">

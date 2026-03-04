@@ -15,7 +15,8 @@ export enum GameMode {
   BEAT_THE_CLOCK = 'beat_the_clock',
   ACCURACY_CHALLENGE = 'accuracy_challenge',
   WPM_RACE = 'wpm_race',
-  CUSTOM_TEXT = 'custom_text'
+  CUSTOM_TEXT = 'custom_text',
+  CODE = 'code'
 }
 
 export enum CompetitiveType {
@@ -62,6 +63,17 @@ export enum KeyboardLayout {
   JIS = 'jis'
 }
 
+export interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  target: number;
+  progress: number;
+  reward: string;
+  completed: boolean;
+  type: 'wpm' | 'races' | 'accuracy' | 'words';
+}
+
 export interface UserProfile {
   username: string;
   avatar: string;
@@ -75,6 +87,8 @@ export interface UserProfile {
     accent: string;
     glass: string;
   };
+  quests?: Quest[];
+  lastQuestDate?: string;
 }
 
 export interface PomodoroSettings {
@@ -99,6 +113,8 @@ export interface UserPreferences {
   focus_penalty?: boolean;
   ghost_racing?: boolean;
   show_heatmap?: boolean;
+  blind_mode?: boolean;
+  streamer_mode?: boolean;
 }
 
 export interface PowerUp {

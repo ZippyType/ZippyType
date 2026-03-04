@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import Leaderboard from './components/Leaderboard';
 import { 
   Trophy, Zap, Target, RotateCcw, Play, Rocket, Settings as SettingsIcon,
   Gamepad2, LogOut, X, Volume2, VolumeX, Github, Globe, User, EyeOff, Eye, 
   Activity, Dna, Clock, Lock, ShieldAlert, AlertCircle, Timer, Download, Upload, FileJson,
   BookOpen, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search, FileText,
-  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users
+  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code
 } from 'lucide-react';
 import { useTranslation } from './src/LanguageContext';
-import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement } from './types';
+import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement, Quest } from './types';
 import { fetchTypingText } from './services/geminiService';
 import { fetchGithubTypingText } from './services/githubService';
 import { getCoachReport } from './services/coachService';
@@ -39,6 +40,8 @@ import KeyHeatmap from './components/KeyHeatmap';
 import Matchmaking from './components/Matchmaking';
 import MultiplayerRace from './components/MultiplayerRace';
 import MultiplayerLobby from './components/MultiplayerLobby';
+import DailyQuests from './components/DailyQuests';
+import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
 const RGB_MAP = {
@@ -72,6 +75,8 @@ const POWER_UP_REFS = {
 const normalizeText = (text: string) => text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, "-").replace(/…/g, "...");
 
 const App: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { t, setLanguage, currentLang } = useTranslation();
   const EN = useMemo(() => new Proxy({}, {
     get: (target, prop) => t(prop as string)
@@ -82,13 +87,16 @@ const App: React.FC = () => {
   const [clientSecret, setClientSecret] = useState("");
   const [textLength, setTextLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [showLengthModal, setShowLengthModal] = useState(false);
+  const [triggerError, setTriggerError] = useState(false);
 
-  const checkProAction = (action: () => void) => {
-    if (profile.is_pro) {
-      action();
-    } else {
-      setShowProModal(true);
-    }
+  const triggerPayment = () => alert("Test Payment Triggered!");
+  const resetTutorial = () => {
+    localStorage.removeItem('tutorial_completed');
+    alert("Tutorial reset!");
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
   };
 
   const handleSubscribe = async () => {
@@ -353,8 +361,56 @@ const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
   const [roomRegion, setRoomRegion] = useState<'global' | 'local'>('global');
   const [hostId, setHostId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/login') {
+      if (user) {
+        navigate('/');
+      } else {
+        setShowAuth(true);
+      }
+    } else if (path === '/signup') {
+      if (user) {
+        navigate('/');
+      } else {
+        setShowAuth(true);
+      }
+    } else if (path.startsWith('/play/')) {
+      setCurrentView(AppView.GAME);
+      const mode = path.split('/')[2];
+      if (mode === 'solo') setGameMode(GameMode.SOLO);
+      else if (mode === 'competitive') setGameMode(GameMode.COMPETITIVE);
+      else if (mode === 'custom') setGameMode(GameMode.CUSTOM_TEXT);
+      else if (mode === 'code') setGameMode(GameMode.CODE);
+    } else if (path === '/tutorial') {
+      setCurrentView(AppView.TUTORIALS);
+    } else if (path === '/profile') {
+      setCurrentView(AppView.PROFILE);
+    } else if (path === '/history') {
+      setCurrentView(AppView.HISTORY);
+    } else if (path === '/leaderboard') {
+      setCurrentView(AppView.LEADERBOARD);
+    } else if (path === '/search') {
+      setCurrentView(AppView.SEARCH);
+    } else if (path.startsWith('/settings')) {
+      setCurrentView(AppView.SETTINGS);
+      if (path === '/settings') setActiveSettingsTab(null);
+      else if (path.includes('/billing')) setActiveSettingsTab('subscription');
+      else if (path.includes('/general')) setActiveSettingsTab('general');
+      else if (path.includes('/hardware')) setActiveSettingsTab('hardware');
+      else if (path.includes('/ai')) setActiveSettingsTab('ai');
+      else setActiveSettingsTab('general');
+    } else if (path === '/pandc') {
+      setCurrentView(AppView.PRIVACY);
+    } else {
+      setCurrentView(AppView.GAME);
+    }
+  }, [location, user]);
   const [joinRoomId, setJoinRoomId] = useState("");
   const [isShaking, setIsShaking] = useState(false);
+  const [blindMode, setBlindMode] = useState(() => localStorage.getItem('blind_mode') === 'true');
+  const [streamerMode, setStreamerMode] = useState(() => localStorage.getItem('streamer_mode') === 'true');
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
     try {
       const saved = localStorage.getItem('zippy_achievements');
@@ -395,7 +451,7 @@ const App: React.FC = () => {
     }
   };
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<number | null>(null);
   const typewriterRef = useRef<number | null>(null);
   const requestCounter = useRef(0);
@@ -881,8 +937,16 @@ const App: React.FC = () => {
     }, 12);
   };
 
-  const loadNewText = async (customDiff?: Difficulty) => {
+  const loadNewText = async (customDiff?: Difficulty, overrideMode?: GameMode) => {
     setLoading(true); const rid = ++requestCounter.current;
+    const currentMode = overrideMode || gameMode;
+    
+    if (currentMode === GameMode.CODE) {
+      setLoadingMsg("Generating code snippet...");
+    } else {
+      setLoadingMsg(LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]);
+    }
+
     try {
       // Check usage limits
       const usageStatus = await incrementUsage(user?.id || null, profile.is_pro || false, !!customTopic);
@@ -902,7 +966,7 @@ const App: React.FC = () => {
       const seed = customTopic;
       
       const generator = async () => {
-        if (gameMode === GameMode.CUSTOM_TEXT) {
+        if (currentMode === GameMode.CUSTOM_TEXT) {
           if (!customRawText.trim()) throw new Error("Please enter some text to practice.");
           return customRawText;
         }
@@ -919,7 +983,8 @@ const App: React.FC = () => {
                 topic: seed || "General",
                 textLength,
                 language: currentLang,
-                isGuest: !user
+                isGuest: !user,
+                mode: currentMode
               })
             });
             if (res.ok) {
@@ -935,7 +1000,7 @@ const App: React.FC = () => {
         }
 
         if (provider === AIProvider.GEMINI) {
-          return await fetchTypingText(customDiff || difficulty, seed || "General", undefined, [], textLength, currentLang);
+          return await fetchTypingText(customDiff || difficulty, seed || "General", undefined, [], textLength, currentLang, currentMode);
         } else {
           if (seed) { // Custom topic requested for non-pro users
             if (!githubToken) {
@@ -949,7 +1014,7 @@ const App: React.FC = () => {
         }
       };
 
-      if (gameMode === GameMode.DAILY) {
+      if (currentMode === GameMode.DAILY) {
         text = await getDailyText(generator);
       } else {
         text = await generator();
@@ -971,14 +1036,14 @@ const App: React.FC = () => {
     }
   };
 
-  const startGame = async () => {
+  const startGame = async (overrideMode?: GameMode) => {
     if (!user) {
       const used = await checkIpSoloUsage();
       if (used) { setHasUsedSolo(true); setShowRestrictedModal(true); return; }
-      if (gameMode !== GameMode.SOLO) { setShowRestrictedModal(true); return; }
+      if ((overrideMode || gameMode) !== GameMode.SOLO) { setShowRestrictedModal(true); return; }
     }
     
-    if (gameMode === GameMode.COMPETITIVE && competitiveType === CompetitiveType.MULTIPLAYER) {
+    if ((overrideMode || gameMode) === GameMode.COMPETITIVE && competitiveType === CompetitiveType.MULTIPLAYER) {
       if (!roomId) return;
       setLoading(true);
       try {
@@ -1084,11 +1149,11 @@ const App: React.FC = () => {
       return;
     }
 
-    playSound('click'); resetGameStats(); setIsActive(true); loadNewText(); 
+    playSound('click'); resetGameStats(); setIsActive(true); loadNewText(undefined, overrideMode); 
     setTimeout(() => inputRef.current?.focus(), 50); 
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isActive || loading || isTypingOut) return;
     if (!startTime) setStartTime(Date.now());
     const val = normalizeText(e.target.value);
@@ -1197,6 +1262,58 @@ const App: React.FC = () => {
     }
   };
 
+  const generateDailyQuests = (): Quest[] => {
+    return [
+      { id: 'q1', title: 'Warmup', description: 'Complete 3 races', target: 3, progress: 0, reward: '100 XP', completed: false, type: 'races' },
+      { id: 'q2', title: 'Speedster', description: 'Reach 60 WPM', target: 60, progress: 0, reward: '200 XP', completed: false, type: 'wpm' },
+      { id: 'q3', title: 'Precision', description: 'Get 100% accuracy', target: 100, progress: 0, reward: '300 XP', completed: false, type: 'accuracy' }
+    ];
+  };
+
+  const checkQuests = (result: TypingResult) => {
+    if (!profile.quests) return;
+    
+    let changed = false;
+    const newQuests = profile.quests.map(q => {
+      if (q.completed) return q;
+      
+      let newProgress = q.progress;
+      if (q.type === 'wpm') newProgress = Math.max(newProgress, result.wpm);
+      if (q.type === 'accuracy') newProgress = Math.max(newProgress, result.accuracy);
+      if (q.type === 'races') newProgress += 1;
+      if (q.type === 'words') newProgress += (result.textLength || 0);
+
+      const completed = newProgress >= q.target;
+      if (completed && !q.completed) {
+        playSound('achievement');
+        changed = true;
+      }
+      if (newProgress !== q.progress) changed = true;
+      
+      return { ...q, progress: newProgress, completed };
+    });
+    
+    if (changed) {
+      const newProfile = { ...profile, quests: newQuests };
+      setProfile(newProfile);
+      if (user) {
+        saveUserPreferences(user.id, { 
+          ai_provider: provider,
+          github_token: githubToken,
+          user_profile: newProfile,
+          pomodoro_settings: pomodoroSettings,
+          ai_opponent_count: aiOpponentCount,
+          ai_opponent_difficulty: aiOpponentDifficulty,
+          calibrated_keys: Array.from(calibratedKeys),
+          key_mappings: keyMappings,
+          sound_profile: soundProfile,
+          keyboard_layout: keyboardLayout,
+          speed_unit: speedUnit
+        });
+      }
+    }
+  };
+
   const completeRace = async (
     overrideWpm?: number, 
     overrideAccuracy?: number, 
@@ -1231,6 +1348,7 @@ const App: React.FC = () => {
       await saveHistory(user.id, result);
       setHistory(prev => [result, ...prev].slice(0, 50));
       checkAchievements(result);
+      checkQuests(result);
 
       // Update Leaderboard Score
       const scoreIncrement = Math.max(0, currentText.length - errors);
@@ -1385,11 +1503,13 @@ const App: React.FC = () => {
       setShowRestrictedModal(true); 
       return; 
     }
-    setActiveSettingsTab(null);
-    setCurrentView(targetView);
+    
+    if (targetView === AppView.PROFILE) navigate('/profile');
+    else if (targetView === AppView.HISTORY) navigate('/history');
+    else if (targetView === AppView.SETTINGS) navigate('/settings');
   };
 
-  const playSound = (type: 'correct' | 'error' | 'finish' | 'click') => {
+  const playSound = (type: 'correct' | 'error' | 'finish' | 'click' | 'achievement') => {
     if (!soundEnabled) return;
     try {
       initAudio();
@@ -1484,6 +1604,7 @@ const App: React.FC = () => {
       </div>
       {showAuth && <Auth onClose={() => setShowAuth(false)} />}
       {user && pomodoroSettings.enabled && <PomodoroTimer settings={pomodoroSettings} />}
+      <BuyMeACoffeeWidget offsetBottom={user && pomodoroSettings.enabled ? 200 : 18} />
       
       {showGeminiError && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-300">
@@ -1712,8 +1833,8 @@ const App: React.FC = () => {
           </div>
         )}
         <header className="flex flex-col md:flex-row justify-between items-center gap-6 glass rounded-[1.75rem] p-6 shadow-2xl relative overflow-hidden border border-white/10">
-          <div className="flex items-center gap-4">
-            <div className="relative group">
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="relative group shrink-0">
               <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
               <img 
                 src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" 
@@ -1722,21 +1843,21 @@ const App: React.FC = () => {
                 referrerPolicy="no-referrer"
               />
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-[-0.08em] leading-none mb-1 flex flex-col italic">
+            <div className="min-w-0">
+              <h1 className="text-2xl md:text-3xl font-black tracking-[-0.08em] leading-none mb-1 flex flex-col italic truncate">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-500 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">ZIPPYTYPE</span>
               </h1>
               <div className="flex items-center gap-2">
-                <div className="h-[1px] w-4 bg-emerald-500/30"></div>
-                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em]">PILOT:</span>
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80">{profile.username}</span>
+                <div className="h-[1px] w-4 bg-emerald-500/30 shrink-0"></div>
+                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em] shrink-0">PILOT:</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.username}</span>
               </div>
             </div>
           </div>
           <nav className="flex items-center gap-4 w-full md:w-auto">
             <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/5 shadow-lg overflow-x-auto no-scrollbar max-w-full">
-              <button onClick={() => { setActiveSettingsTab(null); setCurrentView(AppView.GAME); }} className={`p-3 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={20} /></button>
-              <button onClick={() => { setActiveSettingsTab(null); setCurrentView(AppView.TUTORIALS); }} className={`p-3 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-amber-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Tactical Academy"><BookOpen size={20} /></button>
+              <button onClick={() => navigate('/')} className={`p-3 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={20} /></button>
+              <button onClick={() => navigate('/tutorial')} className={`p-3 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-amber-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Tactical Academy"><BookOpen size={20} /></button>
               <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-3 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
                 <User size={20} />
                 {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={10} className="text-slate-400" /></div>}
@@ -1745,10 +1866,10 @@ const App: React.FC = () => {
                 <Activity size={20} />
                 {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={10} className="text-slate-400" /></div>}
               </button>
-              <button onClick={() => setCurrentView(AppView.SEARCH)} className={`p-3 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-cyan-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
+              <button onClick={() => navigate('/search')} className={`p-3 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-cyan-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
                 <Search size={20} />
               </button>
-              <button onClick={() => setCurrentView(AppView.LEADERBOARD)} className={`p-3 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
+              <button onClick={() => navigate('/leaderboard')} className={`p-3 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
                 <Trophy size={20} />
               </button>
               <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-3 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-purple-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
@@ -1756,14 +1877,14 @@ const App: React.FC = () => {
                 {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={10} className="text-slate-400" /></div>}
               </button>
               {!profile.is_pro && user && !user.is_ip_persistent && (
-                <button onClick={() => { setCurrentView(AppView.SETTINGS); setActiveSettingsTab('subscription'); }} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                <button onClick={() => navigate('/settings/billing')} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
                   <Crown size={14} />
                   {EN.upgradeToPro}
                 </button>
               )}
             </div>
             <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
-            {user ? (<button onClick={() => supabase.auth.signOut()} className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={20} /></button>) : (<button onClick={() => setShowAuth(true)} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
+            {user ? (<button onClick={() => supabase.auth.signOut()} className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={20} /></button>) : (<button onClick={() => navigate('/login')} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
           </nav>
         </header>
 
@@ -1774,6 +1895,9 @@ const App: React.FC = () => {
         ) : currentView === AppView.PROFILE ? (
           <div className="glass rounded-[2rem] p-10 space-y-10 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl">
             <div className="flex items-center gap-3"><div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl"><User size={22} /></div><h2 className="text-base font-black text-white uppercase tracking-tighter">{EN.profileDetails}</h2></div>
+            
+            <DailyQuests quests={profile.quests || []} />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div className="space-y-3"><label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em]">{EN.userName}</label><input value={profile.username} onChange={e => setProfile({...profile, username: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white font-bold text-sm focus:border-emerald-500 transition-all outline-none shadow-inner" /></div>
@@ -1932,7 +2056,7 @@ const App: React.FC = () => {
                 
                 <div className="grid grid-cols-1 gap-4">
                   <button 
-                    onClick={() => setActiveSettingsTab('general')}
+                    onClick={() => { setActiveSettingsTab('general'); navigate('/settings/general'); }}
                     className="flex items-center justify-between p-6 bg-black/40 hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/30 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-4">
@@ -1948,7 +2072,7 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                    onClick={() => setActiveSettingsTab('hardware')}
+                    onClick={() => { setActiveSettingsTab('hardware'); navigate('/settings/hardware'); }}
                     className="flex items-center justify-between p-6 bg-black/40 hover:bg-indigo-500/10 border border-white/5 hover:border-indigo-500/30 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-4">
@@ -1964,7 +2088,7 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                    onClick={() => setActiveSettingsTab('ai')}
+                    onClick={() => { setActiveSettingsTab('ai'); navigate('/settings/ai'); }}
                     className="flex items-center justify-between p-6 bg-black/40 hover:bg-purple-500/10 border border-white/5 hover:border-purple-500/30 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-4">
@@ -1980,7 +2104,7 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                    onClick={() => setActiveSettingsTab('pomodoro')}
+                    onClick={() => { setActiveSettingsTab('pomodoro'); navigate('/settings/pomodoro'); }}
                     className="flex items-center justify-between p-6 bg-black/40 hover:bg-orange-500/10 border border-white/5 hover:border-orange-500/30 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-4">
@@ -1996,7 +2120,7 @@ const App: React.FC = () => {
                   </button>
 
                   <button 
-                    onClick={() => setActiveSettingsTab('subscription')}
+                    onClick={() => { setActiveSettingsTab('subscription'); navigate('/settings/billing'); }}
                     className="flex items-center justify-between p-6 bg-black/40 hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/30 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-4">
@@ -2059,6 +2183,13 @@ const App: React.FC = () => {
                     setGhostRacing={(v) => { setGhostRacing(v); localStorage.setItem('ghost_racing', v.toString()); }}
                     showHeatmap={showHeatmap}
                     setShowHeatmap={(v) => { setShowHeatmap(v); localStorage.setItem('show_heatmap', v.toString()); }}
+                    blindMode={blindMode}
+                    setBlindMode={(v) => { setBlindMode(v); localStorage.setItem('blind_mode', v.toString()); }}
+                    streamerMode={streamerMode}
+                    setStreamerMode={(v) => { setStreamerMode(v); localStorage.setItem('streamer_mode', v.toString()); }}
+                    triggerError={() => setTriggerError(true)}
+                    triggerPayment={triggerPayment}
+                    resetTutorial={resetTutorial}
                   />
                 )}
 
@@ -2281,6 +2412,7 @@ const App: React.FC = () => {
                     { mode: GameMode.ACCURACY_CHALLENGE, label: EN.gameModeAccuracy, desc: EN.gameModeAccuracyDesc, icon: <Target /> },
                     { mode: GameMode.WPM_RACE, label: EN.gameModeWpmRace, desc: EN.gameModeWpmRaceDesc, icon: <Zap /> },
                     { mode: GameMode.CUSTOM_TEXT, label: "Custom Text", desc: "Practice with your own text", icon: <FileText /> },
+                    { mode: GameMode.CODE, label: "Code Mode", desc: "Practice coding syntax", icon: <Code /> },
                     { mode: GameMode.COMPETITIVE, label: "Live 1v1", desc: "Race against real players", icon: <Users /> }
                   ].map((m) => {
                     const isLocked = !user && (m.mode !== GameMode.SOLO || hasUsedSolo);
@@ -2352,7 +2484,7 @@ const App: React.FC = () => {
                       </button>
                     </div>
 
-                    {competitiveType === CompetitiveType.MULTIPLAYER && (
+                    {competitiveType === CompetitiveType.MULTIPLAYER && !isActive && (
                       <MultiplayerLobby
                         user={user}
                         profile={profile}
@@ -2426,7 +2558,7 @@ const App: React.FC = () => {
                       {roomId && (
                         <div className="px-2 py-0.5 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center gap-1.5">
                           <div className="w-1 h-1 bg-rose-500 rounded-full animate-pulse" />
-                          <span className="text-[7px] font-black text-rose-500 uppercase tracking-widest">LIVE ROOM: {roomId}</span>
+                          <span className="text-[7px] font-black text-rose-500 uppercase tracking-widest">LIVE ROOM: {streamerMode ? 'HIDDEN' : roomId}</span>
                         </div>
                       )}
                     </div>
@@ -2474,6 +2606,7 @@ const App: React.FC = () => {
                   ) : (
                     <div className="w-full text-left font-medium drop-shadow-glow">
                       {currentText.split('').map((c, i) => {
+                        if (c === '\n') return <br key={i} />;
                         const isTyped = i < userInput.length;
                         const isCorrect = isTyped && userInput[i] === c;
                         const isCurrent = i === userInput.length;
@@ -2485,6 +2618,7 @@ const App: React.FC = () => {
                             animate={isTyped ? { 
                               color: isCorrect ? '#10b981' : '#f43f5e',
                               scale: isCorrect ? [1, 1.1, 1] : 1,
+                              opacity: blindMode ? 0 : 1
                             } : { color: '#ffffff' }}
                             className={`inline-block transition-all duration-75 ${isTyped ? (isCorrect ? 'font-bold' : 'bg-rose-500/20 rounded px-0.5 mx-0.5') : isCurrent ? `text-white border-b-2 animate-pulse` : 'text-white'}`} 
                             style={{ borderBottomColor: isCurrent ? 'rgb(var(--accent-primary))' : 'transparent' }}
@@ -2497,14 +2631,14 @@ const App: React.FC = () => {
                   )}
                 </div>
                 {isActive && !loading && !isTypingOut && (
-                  <input ref={inputRef} value={userInput} onChange={handleInputChange} className="absolute inset-0 opacity-0 cursor-default" autoFocus />
+                  <textarea ref={inputRef} value={userInput} onChange={handleInputChange} className="absolute inset-0 opacity-0 cursor-default resize-none" autoFocus />
                 )}
               </div>
 
               {showGuide && isActive && !loading && !isTypingOut && <div className="mb-10 animate-in slide-in-from-top-4 duration-500"><TypingGuide nextChar={currentText[userInput.length]} accentColor={profile.accentColor} onFingerClick={scrollToCurrentChar} /></div>}
 
               <div className="mt-4 flex flex-col items-center">
-                <button onClick={isActive ? () => { setIsActive(false); setCurrentText(""); } : startGame} className={`group relative px-12 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-[11px] transition-all shadow-3xl overflow-hidden hover:scale-105 active:scale-95 ${isActive ? 'bg-white/5 text-slate-500 border border-white/10' : `text-white bg-gradient-to-r ${ACCENT_COLORS[profile.accentColor as keyof typeof ACCENT_COLORS]} ring-4 ring-indigo-500/20 shadow-[0_10px_40px_-10px_rgba(var(--accent-primary),0.5)]`}`}>
+                <button onClick={isActive ? () => { setIsActive(false); setCurrentText(""); } : () => startGame()} className={`group relative px-12 py-5 rounded-[1.5rem] font-black uppercase tracking-[0.4em] text-[11px] transition-all shadow-3xl overflow-hidden hover:scale-105 active:scale-95 ${isActive ? 'bg-white/5 text-slate-500 border border-white/10' : `text-white bg-gradient-to-r ${ACCENT_COLORS[profile.accentColor as keyof typeof ACCENT_COLORS]} ring-4 ring-indigo-500/20 shadow-[0_10px_40px_-10px_rgba(var(--accent-primary),0.5)]`}`}>
                   <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-30 transition-opacity" />
                   <div className="relative flex items-center gap-3">{isActive ? <RotateCcw size={20} /> : <Play size={20} />} {isActive ? 'Abort Race' : 'Start Race'}</div>
                 </button>
@@ -2521,8 +2655,7 @@ const App: React.FC = () => {
           href="/pandc"
           onClick={(e) => {
             e.preventDefault();
-            window.history.pushState({}, '', '/pandc');
-            setCurrentView(AppView.PRIVACY);
+            navigate('/pandc');
           }}
           className="text-[10px] font-bold text-slate-600 hover:text-slate-400 uppercase tracking-widest transition-colors"
         >
@@ -2543,9 +2676,6 @@ const App: React.FC = () => {
           className="text-[10px] font-bold text-white hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-2"
         >
            <span className="w-1.5 h-1.5 rounded-full bg-white"></span> Follow us on X
-        </a>
-        <a href="https://www.buymeacoffee.com/zippytype" target="_blank" rel="noopener noreferrer">
-          <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=zippytype&button_colour=FF5F5F&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" alt="Buy Me A Coffee" />
         </a>
       </footer>
 
@@ -2607,7 +2737,7 @@ const App: React.FC = () => {
                 if (customRawText.trim()) {
                   setGameMode(GameMode.CUSTOM_TEXT);
                   setShowCustomTextModal(false);
-                  startGame();
+                  startGame(GameMode.CUSTOM_TEXT);
                 }
               }}
               className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl transition-all shadow-xl uppercase tracking-widest text-[10px]"

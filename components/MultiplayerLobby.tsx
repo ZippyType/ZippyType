@@ -192,7 +192,7 @@ const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
           ) : (
             hostId === user?.id ? (
               <button 
-                onClick={startGame}
+                onClick={() => startGame()}
                 className="group relative px-12 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs transition-all shadow-[0_0_30px_rgba(225,29,72,0.4)] hover:shadow-[0_0_50px_rgba(225,29,72,0.6)] hover:scale-105 active:scale-95"
               >
                 <span className="relative z-10 flex items-center gap-2">

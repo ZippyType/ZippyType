@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { Difficulty } from "../types";
+import { Difficulty, GameMode } from "../types";
 
 export const fetchTypingText = async (
   difficulty: Difficulty, 
@@ -8,8 +8,42 @@ export const fetchTypingText = async (
   seed?: string,
   problemKeys: string[] = [],
   textLength: 'short' | 'medium' | 'long' = 'medium',
-  language: string = 'en'
+  language: string = 'en',
+  mode: GameMode = GameMode.SOLO
 ): Promise<string> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+  const ai = new GoogleGenAI({ apiKey });
+
+  if (mode === GameMode.CODE) {
+    const lang = ['javascript', 'python', 'typescript', 'java', 'c++'][Math.floor(Math.random() * 5)];
+    const prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet.
+    It should be approximately ${textLength === 'short' ? '2-3' : textLength === 'medium' ? '4-6' : '8-12'} lines of code.
+    Do not include comments. Do not include markdown code blocks (like \`\`\`). Just the raw code.
+    Ensure indentation is consistent (2 or 4 spaces).`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      });
+      
+      if (!response || !response.text) {
+        throw new Error("Empty response from Gemini Core.");
+      }
+      
+      // Sanitize code: replace tabs with 2 spaces, remove markdown blocks if any remain
+      let code = response.text.trim();
+      code = code.replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
+      code = code.replace(/\t/g, '  ');
+      
+      return code;
+    } catch (error) {
+      console.error("Gemini Core Error:", error);
+      throw error;
+    }
+  }
+
   const drillContext = problemKeys.length > 0 
     ? `IMPORTANT: This is a neuro-adaptive drill. The user is struggling with these keys: [${problemKeys.join(', ')}]. 
        Ensure the generated text contains an abnormally high frequency of these specific characters to help them practice.`
@@ -33,9 +67,6 @@ export const fetchTypingText = async (
   - Return ONLY the sentence text. No quotes. No extra labels.`;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
-    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,

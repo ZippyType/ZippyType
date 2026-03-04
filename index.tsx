@@ -2,11 +2,43 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ErrorBoundary } from 'react-error-boundary';
+import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import { LanguageProvider } from './src/LanguageContext';
 
 const Fallback = ({ error, resetErrorBoundary }: any) => {
+  const getMailtoLink = () => {
+    const page = window.location.pathname;
+    const errorMsg = error.message;
+    
+    let uuid = "Unknown";
+    let email = "Unknown";
+    
+    const supabaseKey = Object.keys(localStorage).find(key => key.startsWith('sb-') && key.endsWith('-auth-token'));
+    if (supabaseKey) {
+        const session = JSON.parse(localStorage.getItem(supabaseKey) || '{}');
+        email = session.user?.email || "Unknown";
+        uuid = session.user?.id || "Unknown";
+    }
+    
+    if (uuid === "Unknown") {
+        const profileStr = localStorage.getItem('user_profile');
+        const profile = profileStr ? JSON.parse(profileStr) : {};
+        uuid = profile.id || "Unknown";
+    }
+    
+    const profileStr = localStorage.getItem('user_profile');
+    const profile = profileStr ? JSON.parse(profileStr) : {};
+    
+    const isPro = profile.is_pro ? "am" : "am not";
+    const theme = profile.theme || "Default";
+    const displayName = profile.username || "Unknown";
+    
+    const body = `I was viewing ${page} and I got this error: '${errorMsg}'. Please fix this as soon as possible I ${isPro} a ZippyType Pro user, and my theme was ${theme}. My UUID is ${uuid}, my display name is ${displayName} and my email is ${email}`;
+    return `mailto:zippytype@googlegroups.com?subject=ZippyType%20code%20issue&body=${encodeURIComponent(body)}`;
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
       <div className="max-w-md w-full glass rounded-[2rem] p-8 border border-rose-500/20 shadow-2xl space-y-6">
@@ -17,12 +49,20 @@ const Fallback = ({ error, resetErrorBoundary }: any) => {
         <div className="p-4 bg-black/40 rounded-xl border border-white/5 overflow-auto max-h-48">
           <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap">{error.message}</pre>
         </div>
-        <button
-          onClick={resetErrorBoundary}
-          className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
-        >
-          Try Again
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={resetErrorBoundary}
+            className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-rose-500/20"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => window.open(getMailtoLink(), '_blank')}
+            className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all text-center"
+          >
+            Contact Support
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -37,9 +77,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary FallbackComponent={Fallback}>
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
+      <BrowserRouter>
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );
