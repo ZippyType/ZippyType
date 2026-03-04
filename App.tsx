@@ -37,6 +37,7 @@ import { StripeCheckout } from './components/StripeCheckout';
 import HistoryView from './components/HistoryView';
 import WeeklyReport from './components/WeeklyReport';
 import ClanView from './components/ClanView';
+import { ReplayPlayer } from './components/ReplayPlayer';
 import KeyHeatmap from './components/KeyHeatmap';
 import Matchmaking from './components/Matchmaking';
 import MultiplayerRace from './components/MultiplayerRace';
@@ -212,6 +213,7 @@ const App: React.FC = () => {
   const [hasUsedSolo, setHasUsedSolo] = useState<boolean | null>(null);
   const [showProModal, setShowProModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [showReplayModal, setShowReplayModal] = useState(false);
   const [lastResult, setLastResult] = useState<TypingResult | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
@@ -2918,6 +2920,15 @@ const App: React.FC = () => {
                 >
                   Close
                 </button>
+                {lastResult.replayData && lastResult.replayData.length > 0 && (
+                  <button 
+                    onClick={() => setShowReplayModal(true)}
+                    className="flex-1 py-5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-black rounded-2xl text-[11px] uppercase tracking-[0.3em] transition-all border border-indigo-500/20 flex items-center justify-center gap-3"
+                  >
+                    <RotateCcw size={18} />
+                    Watch Replay
+                  </button>
+                )}
                 <button 
                   onClick={() => {
                     const text = `I just typed ${lastResult.wpm} ${speedUnit} with ${lastResult.accuracy}% accuracy on ZippyType! 🚀`;
@@ -2936,6 +2947,16 @@ const App: React.FC = () => {
               </div>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {showReplayModal && lastResult && lastResult.replayData && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+          <ReplayPlayer 
+            replayData={lastResult.replayData} 
+            text={lastResult.text || ""} 
+            onClose={() => setShowReplayModal(false)} 
+          />
         </div>
       )}
 

@@ -38,42 +38,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history, speedUnit, problemKe
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl"
           >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-4xl space-y-6"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black text-white uppercase tracking-tighter">Race Replay</h3>
-                  <p className="text-xs text-slate-400 font-mono">{new Date(selectedReplay.date).toLocaleString()} • {selectedReplay.wpm} WPM</p>
-                </div>
-                <button 
-                  onClick={() => setSelectedReplay(null)} 
-                  className="p-3 bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-2xl transition-all"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <ReplayPlayer replayData={selectedReplay.replayData} text={selectedReplay.text || ""} />
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Speed</p>
-                  <p className="text-xl font-black text-white">{selectedReplay.wpm} <span className="text-[10px] text-slate-500 uppercase">{speedUnit}</span></p>
-                </div>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Accuracy</p>
-                  <p className="text-xl font-black text-emerald-400">{selectedReplay.accuracy}%</p>
-                </div>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Errors</p>
-                  <p className="text-xl font-black text-rose-400">{selectedReplay.errors}</p>
-                </div>
-              </div>
-            </motion.div>
+            <ReplayPlayer 
+              replayData={selectedReplay.replayData} 
+              text={selectedReplay.text || ""} 
+              onClose={() => setSelectedReplay(null)}
+            />
           </motion.div>
         )}
       </AnimatePresence>
