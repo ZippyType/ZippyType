@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
 @font-face {
   font-family: 'ZippyFont';
   src: url('https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/font.ttf') format('truetype');
@@ -5,9 +8,6 @@
   font-style: normal;
   font-display: swap;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-@import "tailwindcss";
 
 :root {
   --accent-primary: 99, 102, 241;

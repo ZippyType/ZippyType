@@ -30,8 +30,8 @@ import AISettings from './components/settings/AISettings';
 import HardwareSettings from './components/settings/HardwareSettings';
 import PomodoroSettingsView from './components/settings/PomodoroSettings';
 import GeneralSettings from './components/settings/GeneralSettings';
-// import { SpeedInsights } from "@vercel/speed-insights/react"
-// import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from "@vercel/analytics/react"
 import { motion, AnimatePresence } from 'motion/react';
 import { StripeCheckout } from './components/StripeCheckout';
 import HistoryView from './components/HistoryView';
@@ -44,6 +44,7 @@ import MultiplayerRace from './components/MultiplayerRace';
 import MultiplayerLobby from './components/MultiplayerLobby';
 import DailyQuests from './components/DailyQuests';
 import AccountSettings from './components/AccountSettings';
+import ProfileView from './components/ProfileView';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
@@ -264,6 +265,30 @@ const App: React.FC = () => {
   const [calibratedKeys, setCalibratedKeys] = useState<Set<string>>(new Set());
   const [keyMappings, setKeyMappings] = useState<Record<string, string>>({});
   const [speedUnit, setSpeedUnit] = useState<'wpm' | 'cpm'>('wpm');
+
+  const savePrefs = useCallback(async (newProfile?: UserProfile) => {
+    if (!user) return;
+    setSaveStatus('saving');
+    try {
+      await saveUserPreferences(user.id, {
+        ai_provider: provider,
+        github_token: githubToken,
+        user_profile: newProfile || profile,
+        pomodoro_settings: pomodoroSettings,
+        ai_opponent_count: aiOpponentCount,
+        ai_opponent_difficulty: aiOpponentDifficulty,
+        calibrated_keys: Array.from(calibratedKeys),
+        key_mappings: keyMappings,
+        sound_profile: soundProfile,
+        keyboard_layout: keyboardLayout,
+        speed_unit: speedUnit
+      });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (e) {
+      setSaveStatus('error');
+    }
+  }, [user, provider, githubToken, profile, pomodoroSettings, aiOpponentCount, aiOpponentDifficulty, calibratedKeys, keyMappings, soundProfile, keyboardLayout, speedUnit]);
   const [problemKeys, setProblemKeys] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('zippy_problem_keys') || '[]');
@@ -393,6 +418,8 @@ const App: React.FC = () => {
       else if (mode === 'code') setGameMode(GameMode.CODE);
     } else if (path === '/tutorial') {
       setCurrentView(AppView.TUTORIALS);
+    } else if (path.startsWith('/users/@')) {
+      setCurrentView(AppView.PROFILE);
     } else if (path === '/profile') {
       setCurrentView(AppView.PROFILE);
     } else if (path === '/history') {
@@ -410,6 +437,7 @@ const App: React.FC = () => {
       else if (path.includes('/general')) setActiveSettingsTab('general');
       else if (path.includes('/hardware')) setActiveSettingsTab('hardware');
       else if (path.includes('/ai')) setActiveSettingsTab('ai');
+      else if (path.includes('/account')) setActiveSettingsTab('account');
       else setActiveSettingsTab('general');
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
@@ -1899,7 +1927,7 @@ const App: React.FC = () => {
               <img 
                 src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" 
                 alt="ZippyType" 
-                className="relative w-12 h-12 md:w-14 md:h-14 object-cover rounded-2xl border border-white/10 shadow-2xl"
+                className="relative w-12 h-12 md:w-14 md:h-14 object-cover rounded-full border border-white/10 shadow-2xl"
                 referrerPolicy="no-referrer"
               />
             </div>
@@ -1910,51 +1938,48 @@ const App: React.FC = () => {
               <div className="flex items-center gap-2">
                 <div className="h-[1px] w-4 bg-emerald-500/30 shrink-0"></div>
                 <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em] shrink-0">PILOT:</span>
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.username}</span>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.handle || profile.username}</span>
               </div>
             </div>
           </div>
-          <nav className="flex items-center gap-4 w-full md:w-auto">
-            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/5 shadow-lg max-w-full">
-              <button onClick={() => navigate('/')} className={`p-3 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={20} /></button>
-              <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-3 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
-                <User size={20} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={10} className="text-slate-400" /></div>}
+          <nav className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+            <div className="flex bg-black/50 p-1 rounded-2xl border border-white/5 shadow-lg shrink-0">
+              <button onClick={() => navigate('/')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={18} /></button>
+              <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
+                <User size={18} />
+                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
               </button>
-              <button onClick={() => navigate('/leaderboard')} className={`p-3 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
-                <Trophy size={20} />
+              <button onClick={() => navigate('/leaderboard')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
+                <Trophy size={18} />
               </button>
-              <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-3 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Clans">
-                <Users size={20} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={10} className="text-slate-400" /></div>}
+              <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Clans">
+                <Users size={18} />
+                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+              </button>
+              <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
+                <BookOpen size={18} />
+              </button>
+              <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
+                <Activity size={18} />
+              </button>
+              <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
+                <Search size={18} />
+              </button>
+              <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
+                <SettingsIcon size={18} />
               </button>
             </div>
             
-            <div className="relative group/more">
-              <button className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md"><MoreHorizontal size={20} /></button>
-              <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl opacity-0 invisible group-hover/more:opacity-100 group-hover/more:visible transition-all z-[100] p-2">
-                <button onClick={() => navigate('/tutorial')} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest">
-                  <BookOpen size={16} /> Academy
-                </button>
-                <button onClick={() => checkRestricted(AppView.HISTORY)} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest">
-                  <Activity size={16} /> History
-                </button>
-                <button onClick={() => navigate('/search')} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest">
-                  <Search size={16} /> Search
-                </button>
-                <button onClick={() => checkRestricted(AppView.SETTINGS)} className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all text-xs font-bold uppercase tracking-widest">
-                  <SettingsIcon size={16} /> Settings
-                </button>
-              </div>
-            </div>
+            <div className="flex items-center gap-2 shrink-0">
               {!profile.is_pro && user && !user.is_ip_persistent && (
-                <button onClick={() => navigate('/settings/billing')} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
-                  <Crown size={14} />
-                  {EN.upgradeToPro}
+                <button onClick={() => navigate('/settings/billing')} className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                  <Crown size={12} />
+                  PRO
                 </button>
               )}
-            <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
-            {user ? (<button onClick={() => supabase.auth.signOut()} className="p-3 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={20} /></button>) : (<button onClick={() => navigate('/login')} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
+              {user ? (<button onClick={() => supabase.auth.signOut()} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={18} /></button>) : (<button onClick={() => navigate('/login')} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
+            </div>
           </nav>
         </header>
 
@@ -1965,186 +1990,17 @@ const App: React.FC = () => {
         ) : currentView === AppView.CLANS ? (
           <ClanView user={user} profile={profile} />
         ) : currentView === AppView.PROFILE ? (
-          <div className="glass rounded-[2rem] p-10 space-y-10 animate-in zoom-in-95 duration-300 border border-white/10 shadow-2xl">
-            <div className="flex items-center gap-3"><div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl"><User size={22} /></div><h2 className="text-base font-black text-white uppercase tracking-tighter">{EN.profileDetails}</h2></div>
-            
-            <DailyQuests quests={profile.quests || []} />
-
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <Trophy size={20} className="text-amber-500" />
-                <h3 className="text-sm font-black text-white uppercase tracking-widest">Pilot Achievements</h3>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {achievements.map(a => (
-                  <div 
-                    key={a.id} 
-                    className={`p-4 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 ${
-                      a.unlockedAt 
-                        ? 'bg-indigo-500/10 border-indigo-500/30' 
-                        : 'bg-black/20 border-white/5 opacity-40 grayscale'
-                    }`}
-                  >
-                    <span className="text-3xl">{a.icon}</span>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-white uppercase tracking-widest">{a.title}</p>
-                      <p className="text-[8px] font-medium text-slate-500 leading-tight">{a.description}</p>
-                    </div>
-                    {a.unlockedAt && (
-                      <div className="mt-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full text-[7px] font-black uppercase tracking-widest">
-                        Unlocked
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-6">
-                <div className="space-y-3"><label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em]">{EN.userName}</label><input value={profile.username} onChange={e => setProfile({...profile, username: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-white font-bold text-sm focus:border-emerald-500 transition-all outline-none shadow-inner" /></div>
-                <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] flex items-center gap-2">
-                    {EN.accentColor}
-                    {!profile.is_pro && <Lock size={10} className="text-amber-500" />}
-                  </label>
-                  <div className="flex gap-4">
-                    {Object.keys(RGB_MAP).map(c => (
-                      <button 
-                        key={c} 
-                        onClick={() => {
-                          if (profile.is_pro || c === 'indigo') {
-                            setProfile({...profile, accentColor: c as any});
-                          } else {
-                            setShowProModal(true);
-                          }
-                        }} 
-                        className={`w-10 h-10 rounded-xl border-2 transition-all ${profile.accentColor === c ? 'border-white scale-110 shadow-xl shadow-white/10' : 'border-transparent opacity-40 hover:opacity-100'} bg-${c}-500 relative`}
-                      >
-                        {!profile.is_pro && c !== 'indigo' && (
-                          <div className="absolute -top-1 -right-1 bg-slate-900 rounded-full p-0.5 border border-white/10">
-                            <Lock size={8} className="text-slate-400" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] flex items-center gap-2">
-                    {EN.theme}
-                    {!profile.is_pro && <Lock size={10} className="text-amber-500" />}
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { id: '', name: 'Default Dark' },
-                      { id: 'light', name: 'Clean Light' },
-                      { id: 'midnight', name: 'Midnight OLED' },
-                      { id: 'cyberpunk', name: 'Cyberpunk' },
-                      { id: 'nordic', name: 'Nordic Frost' },
-                      { id: 'sunset', name: 'Sunset Glow' },
-                      { id: 'forest', name: 'Emerald Forest' },
-                      { id: 'ocean', name: 'Deep Sea' },
-                      { id: 'custom', name: 'Custom Theme' }
-                    ].map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          if (profile.is_pro || t.id === '') {
-                            setProfile({...profile, theme: t.id});
-                          } else {
-                            setShowProModal(true);
-                          }
-                        }}
-                        className={`p-4 rounded-xl border-2 transition-all text-left relative ${
-                          (profile.theme || '') === t.id 
-                            ? 'border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/20' 
-                            : 'border-white/5 bg-black/20 hover:border-white/20'
-                        }`}
-                      >
-                        <span className="text-xs font-bold text-white">{t.name}</span>
-                        {!profile.is_pro && t.id !== '' && (
-                          <div className="absolute top-2 right-2">
-                            <Lock size={12} className="text-slate-500" />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {profile.theme === 'custom' && profile.is_pro && (
-                  <div className="p-6 glass border border-white/10 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-4">
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
-                      <SettingsIcon size={14} className="text-indigo-400" /> Custom Theme Editor
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Background</label>
-                        <input 
-                          type="color" 
-                          value={profile.customTheme?.bg || '#02040a'} 
-                          onChange={e => setProfile({
-                            ...profile, 
-                            customTheme: { ...(profile.customTheme || { bg: '#02040a', text: '#e2e8f0', accent: '99, 102, 241', glass: 'rgba(10, 12, 20, 0.7)' }), bg: e.target.value }
-                          })}
-                          className="w-full h-10 bg-black/40 border border-white/10 rounded-lg cursor-pointer"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Text Color</label>
-                        <input 
-                          type="color" 
-                          value={profile.customTheme?.text || '#e2e8f0'} 
-                          onChange={e => setProfile({
-                            ...profile, 
-                            customTheme: { ...(profile.customTheme || { bg: '#02040a', text: '#e2e8f0', accent: '99, 102, 241', glass: 'rgba(10, 12, 20, 0.7)' }), text: e.target.value }
-                          })}
-                          className="w-full h-10 bg-black/40 border border-white/10 rounded-lg cursor-pointer"
-                        />
-                      </div>
-                      <div className="space-y-2 col-span-2">
-                        <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Accent RGB (e.g. 99, 102, 241)</label>
-                        <input 
-                          type="text" 
-                          value={profile.customTheme?.accent || '99, 102, 241'} 
-                          onChange={e => setProfile({
-                            ...profile, 
-                            customTheme: { ...(profile.customTheme || { bg: '#02040a', text: '#e2e8f0', accent: '99, 102, 241', glass: 'rgba(10, 12, 20, 0.7)' }), accent: e.target.value }
-                          })}
-                          className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-white font-bold text-xs focus:border-indigo-500 transition-all outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-5"><label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em]">Avatar</label><div className="grid grid-cols-5 gap-4">{AVATARS.map(v => (<button key={v} onClick={() => setProfile({...profile, avatar: v})} className={`text-2xl p-4 rounded-xl border-2 transition-all hover:scale-110 ${profile.avatar === v ? 'border-emerald-500 bg-emerald-500/10 shadow-xl shadow-emerald-500/10' : 'border-white/5 bg-black/50 opacity-30 hover:opacity-100'}`}>{v}</button>))}</div></div>
-            </div>
-
-            <div className="space-y-6 pt-6 border-t border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl"><Trophy size={22} /></div>
-                <h2 className="text-base font-black text-white uppercase tracking-tighter">Achievements</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {achievements.map(a => (
-                  <div 
-                    key={a.id} 
-                    className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${a.unlockedAt ? 'bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5' : 'bg-black/20 border-white/5 opacity-40 grayscale'}`}
-                  >
-                    <div className="text-3xl">{a.icon}</div>
-                    <div>
-                      <h4 className="text-[11px] font-black text-white uppercase tracking-widest leading-none mb-1">{a.title}</h4>
-                      <p className="text-[9px] text-slate-500 font-bold">{a.description}</p>
-                      {a.unlockedAt && (
-                        <p className="text-[8px] text-amber-400/60 mt-1 uppercase font-black">Unlocked {new Date(a.unlockedAt).toLocaleDateString()}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <ProfileView 
+            username={location.pathname.startsWith('/users/@') ? location.pathname.split('@')[1] : (profile.handle || profile.username)}
+            currentUser={user}
+            currentProfile={profile}
+            onUpdateProfile={(p) => {
+              setProfile(p);
+              savePrefs(p);
+            }}
+            achievements={achievements}
+            history={history}
+          />
         ) : currentView === AppView.SETTINGS ? (
           <div className="space-y-8 animate-in zoom-in-95 duration-300">
             {!activeSettingsTab ? (
@@ -2590,37 +2446,6 @@ const App: React.FC = () => {
                     exit={{ opacity: 0, y: -10 }}
                     className="flex flex-col items-center gap-6 w-full"
                   >
-                    <div className="glass p-1.5 rounded-2xl flex gap-2 border border-white/10 shadow-xl overflow-x-auto no-scrollbar max-w-full">
-                      {[
-                        { id: 'daily', label: 'Daily', icon: <Sparkles size={14} /> },
-                        { id: 'speed', label: 'Speed Round', icon: <Zap size={14} /> },
-                        { id: 'accuracy', label: 'Accuracy', icon: <Target size={14} /> },
-                        { id: 'themed', label: 'Themed', icon: <Book size={14} /> }
-                      ].map(sm => (
-                        <button 
-                          key={sm.id}
-                          onClick={() => setGameSubMode(sm.id as any)}
-                          className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${gameSubMode === sm.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
-                        >
-                          {sm.icon}
-                          {sm.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {gameSubMode === 'themed' && (
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full pb-2">
-                        {['General', 'Coding', 'Nature', 'Space', 'History', 'Science', 'Literature', 'Movies'].map(t => (
-                          <button 
-                            key={t}
-                            onClick={() => setSelectedTheme(t)}
-                            className={`px-4 py-2 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all border ${selectedTheme === t ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-black/20 border-white/5 text-slate-500 hover:text-white'}`}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </motion.div>
                 )}
 
@@ -2836,8 +2661,8 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
-      {/* <SpeedInsights />
-      <Analytics /> */}
+      <SpeedInsights />
+      <Analytics />
       <footer className="w-full max-w-4xl py-6 flex justify-center items-center gap-8">
         <a 
           href="/pandc"

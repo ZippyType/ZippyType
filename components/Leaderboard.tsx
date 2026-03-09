@@ -30,7 +30,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
       setLoading(true);
       const { data, error } = await supabase
         .from('leaderboard')
-        .select('*, usernames(username)')
+        .select('*')
         .order('score', { ascending: false })
         .limit(100);
 
@@ -41,7 +41,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
         const rankedData = data.map((entry: any, index: number) => ({
           ...entry,
           rank: index + 1,
-          handle: entry.usernames?.username || 'unknown'
+          handle: entry.username || 'unknown'
         }));
         setEntries(rankedData);
 
