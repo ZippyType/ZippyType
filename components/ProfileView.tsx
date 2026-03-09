@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { User, Trophy, Zap, Target, Rocket, Lock, CheckCircle2, Loader2, RotateCcw, Camera, Activity } from 'lucide-react';
-import { supabase, loadUserPreferences, fetchHistory } from '../services/supabaseService';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Trophy, Zap, Target, Rocket, Lock, CheckCircle2, Loader2, RotateCcw, Camera, Activity, Upload } from 'lucide-react';
+import { supabase, loadUserPreferences, fetchHistory, uploadAvatar, fetchAchievements } from '../services/supabaseService';
 import { UserProfile, Achievement, TypingResult } from '../types';
 import DailyQuests from './DailyQuests';
 import HistoryChart from './HistoryChart';
@@ -15,6 +15,51 @@ interface ProfileViewProps {
 }
 
 const AVATARS = ['😊', '😎', '🤖', '🦊', '🐱', '🐶', '🦄', '🌈', '⚡', '✨', '🛸', '🚀', '👾', '🎮', '🏆', '💎'];
+
+const resizeImage = (file: File, maxSizeMB: number): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        let quality = 0.9;
+
+        const process = () => {
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              if (blob.size / 1024 / 1024 > maxSizeMB && (width > 100 || height > 100)) {
+                // Still too big, reduce resolution and quality
+                width *= 0.8;
+                height *= 0.8;
+                quality *= 0.8;
+                process();
+              } else {
+                // Return a new file with the correct name and type
+                const fileExt = file.name.split('.').pop();
+                const fileName = file.name;
+                resolve(new File([blob], fileName, { type: file.type }));
+              }
+            } else {
+              reject(new Error("Canvas toBlob failed"));
+            }
+          }, file.type, quality);
+        };
+        process();
+      };
+    };
+    reader.onerror = reject;
+  });
+};
 
 const ProfileView: React.FC<ProfileViewProps> = ({ 
   username, 
@@ -33,6 +78,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   const [newUsername, setNewUsername] = useState(currentProfile.username);
   const [newAvatar, setNewAvatar] = useState(currentProfile.avatar);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOwnProfile) {
@@ -68,12 +114,52 @@ const ProfileView: React.FC<ProfileViewProps> = ({
       const hist = await fetchHistory(userData.user_id);
       setUserHistory(hist);
 
-      // Note: Achievements are currently local-only, so we can't show them for others yet
-      // unless we move them to the database.
+      // 4. Load achievements
+      const ach = await fetchAchievements(userData.user_id);
+      if (ach) {
+        setUserAchievements(ach);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      alert("Only PNG and JPEG/JPG files are supported.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let finalFile = file;
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+      if (file.size > MAX_SIZE) {
+        finalFile = await resizeImage(file, 5);
+      }
+
+      const publicUrl = await uploadAvatar(currentUser.id, finalFile);
+      setNewAvatar(publicUrl);
+      
+      // If not in editing mode, save immediately
+      if (!editing) {
+        const updatedProfile = { ...profile, avatar: publicUrl };
+        onUpdateProfile(updatedProfile);
+        setProfile(updatedProfile);
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to upload avatar. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -114,7 +200,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
         
         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
           <div className="relative group">
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-white/10 flex items-center justify-center text-6xl md:text-7xl shadow-2xl group-hover:scale-105 transition-transform duration-500">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-white/10 flex items-center justify-center text-6xl md:text-7xl shadow-2xl group-hover:scale-105 transition-transform duration-500 overflow-hidden">
               {editing ? (
                 <div className="grid grid-cols-4 gap-2 p-4 overflow-y-auto max-h-full no-scrollbar">
                   {AVATARS.map(a => (
@@ -128,16 +214,39 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                   ))}
                 </div>
               ) : (
-                profile.avatar
+                newAvatar.startsWith('http') ? (
+                  <img src={newAvatar} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  newAvatar
+                )
               )}
             </div>
-            {isOwnProfile && !editing && (
-              <button 
-                onClick={() => setEditing(true)}
-                className="absolute -bottom-2 -right-2 p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl transition-all hover:scale-110 active:scale-95 border border-white/20"
-              >
-                <Camera size={18} />
-              </button>
+            {isOwnProfile && (
+              <div className="absolute -bottom-2 -right-2 flex gap-2">
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                  accept=".png,.jpg,.jpeg" 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-xl transition-all hover:scale-110 active:scale-95 border border-white/20"
+                  title="Upload Picture"
+                >
+                  <Upload size={18} />
+                </button>
+                {!editing && (
+                  <button 
+                    onClick={() => setEditing(true)}
+                    className="p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl transition-all hover:scale-110 active:scale-95 border border-white/20"
+                    title="Edit Profile"
+                  >
+                    <Camera size={18} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

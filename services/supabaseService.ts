@@ -10,6 +10,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // --- Encryption Helpers ---
 const ENCRYPTION_PREFIX = 'ENC:';
 
+async function getIP(): Promise<string> {
+  const services = [
+    'https://api.ipify.org?format=json',
+    'https://ipapi.co/json/',
+    'https://api.seeip.org/jsonip'
+  ];
+  
+  for (const service of services) {
+    try {
+      const res = await fetch(service, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      return data.ip || data.ip_address || data.query;
+    } catch (e) {
+      console.warn(`IP service ${service} failed:`, e);
+    }
+  }
+  throw new Error("All IP services failed");
+}
+
 async function hashIP(ip: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(ip);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -165,8 +185,7 @@ export const signInWithGoogle = async () => {
 
 export const linkUserToIp = async (userId: string) => {
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const { ip } = await res.json();
+    const ip = await getIP();
     const hashedIp = await hashIP(ip);
     await supabase.from('ip_sessions').upsert({ ip_address: hashedIp, user_id: userId });
   } catch (e) {
@@ -176,8 +195,7 @@ export const linkUserToIp = async (userId: string) => {
 
 export const getUserIdByIp = async (): Promise<string | null> => {
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const { ip } = await res.json();
+    const ip = await getIP();
     const hashedIp = await hashIP(ip);
     const { data } = await supabase.from('ip_sessions').select('user_id').eq('ip_address', hashedIp).maybeSingle();
     return data?.user_id || null;
@@ -188,8 +206,7 @@ export const getUserIdByIp = async (): Promise<string | null> => {
 
 export const checkIpSoloUsage = async (): Promise<boolean> => {
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const { ip } = await res.json();
+    const ip = await getIP();
     const hashedIp = await hashIP(ip);
     const { data } = await supabase.from('anonymous_runs').select('ip_address').eq('ip_address', hashedIp).maybeSingle();
     return !!data;
@@ -200,8 +217,7 @@ export const checkIpSoloUsage = async (): Promise<boolean> => {
 
 export const recordIpSoloUsage = async () => {
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
-    const { ip } = await res.json();
+    const ip = await getIP();
     const hashedIp = await hashIP(ip);
     await supabase.from('anonymous_runs').upsert({ ip_address: hashedIp });
   } catch (e) {
@@ -213,9 +229,8 @@ export const incrementUsage = async (userId: string | null, isPro: boolean, isCu
   try {
     let hashedIp = null;
     if (!userId) {
-      const res = await fetch('https://api.ipify.org?format=json');
-      const data = await res.json();
-      hashedIp = await hashIP(data.ip);
+      const ip = await getIP();
+      hashedIp = await hashIP(ip);
     }
     
     const { data, error } = await supabase.rpc('increment_usage', {
@@ -289,28 +304,85 @@ export const saveHistory = async (userId: string, result: any) => {
   }
 };
 
-export const fetchHistory = async (userId: string) => {
+export const fetchHistory = async (userId: string, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Fetching history for user: ${userId} (Attempt ${i + 1})`);
+      const { data, error } = await supabase
+        .from('history')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Supabase error fetching history:', error);
+        throw error;
+      }
+      return data.map((item: any) => ({
+        id: item.id,
+        date: item.created_at,
+        wpm: item.wpm,
+        accuracy: item.accuracy,
+        time: item.time,
+        errors: item.errors,
+        difficulty: item.difficulty,
+        mode: item.mode,
+        textLength: item.text_length
+      }));
+    } catch (e) {
+      console.error(`Failed to fetch history (Attempt ${i + 1}):`, e);
+      if (i === retries - 1) return [];
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+  return [];
+};
+
+export const uploadAvatar = async (userId: string, file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `profile_pic_${userId}.${fileExt}`;
+  const filePath = `${userId}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('profile-pictures')
+    .upload(filePath, file, { 
+      upsert: true,
+      contentType: file.type
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('profile-pictures')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+};
+
+export const fetchAchievements = async (userId: string) => {
   try {
     const { data, error } = await supabase
-      .from('history')
-      .select('*')
+      .from('user_achievements')
+      .select('achievements')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .maybeSingle();
     
     if (error) throw error;
-    return data.map((item: any) => ({
-      id: item.id,
-      date: item.created_at,
-      wpm: item.wpm,
-      accuracy: item.accuracy,
-      time: item.time,
-      errors: item.errors,
-      difficulty: item.difficulty,
-      mode: item.mode,
-      textLength: item.text_length
-    }));
+    return data?.achievements || null;
   } catch (e) {
-    console.error('Failed to fetch history', e);
-    return [];
+    console.error('Failed to fetch achievements', e);
+    return null;
+  }
+};
+
+export const saveAchievements = async (userId: string, achievements: any[]) => {
+  try {
+    const { error } = await supabase
+      .from('user_achievements')
+      .upsert({ user_id: userId, achievements, updated_at: new Date().toISOString() });
+    
+    if (error) throw error;
+  } catch (e) {
+    console.error('Failed to save achievements', e);
   }
 };

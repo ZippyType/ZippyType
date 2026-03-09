@@ -14,7 +14,7 @@ import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, Power
 import { generateText } from './services/aiService';
 import { fetchGithubTypingText } from './services/githubService';
 import { getCoachReport } from './services/coachService';
-import { supabase, saveUserPreferences, loadUserPreferences, checkIpSoloUsage, recordIpSoloUsage, getUserIdByIp, getDailyText, initializeUserCredits, saveHistory, fetchHistory as fetchHistoryService, incrementUsage, checkProStatus } from './services/supabaseService';
+import { supabase, saveUserPreferences, loadUserPreferences, checkIpSoloUsage, recordIpSoloUsage, getUserIdByIp, getDailyText, initializeUserCredits, saveHistory, fetchHistory as fetchHistoryService, incrementUsage, checkProStatus, fetchAchievements, saveAchievements } from './services/supabaseService';
 import { saveZippyData, loadZippyData, ZippyStats } from './services/storageService';
 import StatsCard from './components/StatsCard';
 import HistoryChart from './components/HistoryChart';
@@ -465,9 +465,11 @@ const App: React.FC = () => {
       { id: 'night_owl', title: 'Night Owl', description: 'Complete a race between 12 AM and 4 AM', icon: '🦉' }
     ];
   });
+
   const [easterEggTriggered, setEasterEggTriggered] = useState(false);
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'playing' | 'finished'>('waiting');
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+
   const checkAchievements = (result: TypingResult) => {
     let updated = false;
     const newAchievements = achievements.map(a => {
@@ -502,6 +504,9 @@ const App: React.FC = () => {
     if (updated) {
       setAchievements(newAchievements);
       localStorage.setItem('zippy_achievements', JSON.stringify(newAchievements));
+      if (user && !user.is_ip_persistent) {
+        saveAchievements(user.id, newAchievements);
+      }
     }
   };
 
@@ -773,6 +778,14 @@ const App: React.FC = () => {
             }
 
             fetchHistory(newUser.id);
+            const dbAchievements = await fetchAchievements(newUser.id);
+            if (dbAchievements) {
+              setAchievements(dbAchievements);
+              localStorage.setItem('zippy_achievements', JSON.stringify(dbAchievements));
+            } else {
+              // If no achievements in DB, save local ones to DB
+              saveAchievements(newUser.id, achievements);
+            }
             setHasUsedSolo(null);
             initializeUserCredits(newUser.id);
           } else {
