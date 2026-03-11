@@ -7,6 +7,24 @@
   <meta name="google-site-verification" content="fi9TtZTXdhkEX0mJRlWbO9i02r8qJ_KQm2XHzNo9m0E" />
   <title>ZippyType | Professional Speed Typing</title>
   <link rel="icon" type="image/png" href="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" />
+  <script>
+    (function() {
+      // Basic HTML5 feature detection
+      var isSupported = !!(window.CanvasRenderingContext2D && window.localStorage && window.addEventListener);
+      if (!isSupported) {
+        document.documentElement.className += ' browser-not-supported';
+        window.onload = function() {
+          document.body.innerHTML = 
+            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#f8fafc;font-family:sans-serif;text-align:center;padding:20px;box-sizing:border-box;">' +
+              '<div style="max-width:400px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);padding:40px;border-radius:32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">' +
+                '<h1 style="font-size:24px;margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:-0.05em;color:#f43f5e;">Your Browser is not supported.</h1>' +
+                '<p style="font-size:16px;opacity:0.8;line-height:1.6;">Please upgrade your browser to use ZippyType.</p>' +
+              '</div>' +
+            '</div>';
+        };
+      }
+    })();
+  </script>
 </head>
 <body>
   <div id="root"></div>
