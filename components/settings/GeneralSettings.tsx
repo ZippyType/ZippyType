@@ -30,6 +30,7 @@ interface GeneralSettingsProps {
   triggerError: () => void;
   triggerPayment: () => void;
   resetTutorial: () => void;
+  triggerOldBrowser: () => void;
 }
 
 const languages = [
@@ -67,7 +68,8 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setStreamerMode,
   triggerError,
   triggerPayment,
-  resetTutorial
+  resetTutorial,
+  triggerOldBrowser
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
@@ -353,6 +355,9 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           </button>
           <button onClick={resetTutorial} className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all">
             Reset Tutorial
+          </button>
+          <button onClick={triggerOldBrowser} className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all">
+            Simulate Old Browser
           </button>
         </div>
       )}

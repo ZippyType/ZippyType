@@ -45,6 +45,7 @@ import MultiplayerLobby from './components/MultiplayerLobby';
 import DailyQuests from './components/DailyQuests';
 import AccountSettings from './components/AccountSettings';
 import ProfileView from './components/ProfileView';
+import HelpView from './components/HelpView';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
@@ -92,8 +93,9 @@ const App: React.FC = () => {
   const [textLength, setTextLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [showLengthModal, setShowLengthModal] = useState(false);
   const [triggerError, setTriggerError] = useState(false);
+  const [simulateOldBrowser, setSimulateOldBrowser] = useState(false);
 
-  const triggerPayment = () => alert("Test Payment Triggered!");
+  const triggerPayment = () => setShowProModal(true);
   const resetTutorial = () => {
     localStorage.removeItem('tutorial_completed');
     alert("Tutorial reset!");
@@ -1689,6 +1691,32 @@ const App: React.FC = () => {
     if (data) setHistory(data);
   };
 
+  if (triggerError) {
+    throw new Error("Developer triggered error for testing purposes.");
+  }
+
+  if (simulateOldBrowser) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="w-20 h-20 bg-rose-500/10 text-rose-500 rounded-3xl flex items-center justify-center mx-auto border border-rose-500/20">
+            <ShieldAlert size={40} />
+          </div>
+          <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Your Browser is not supported</h1>
+          <p className="text-slate-400 text-sm font-medium leading-relaxed">
+            Please upgrade your browser to use ZippyType. We use modern web technologies that are not available in older browsers.
+          </p>
+          <button 
+            onClick={() => setSimulateOldBrowser(false)}
+            className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+          >
+            Exit Simulation
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen p-4 md:p-6 flex flex-col items-center transition-all duration-700`}>
       <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
@@ -2002,6 +2030,8 @@ const App: React.FC = () => {
           <Leaderboard currentUser={user} userProfile={profile} />
         ) : currentView === AppView.CLANS ? (
           <ClanView user={user} profile={profile} />
+        ) : currentView === AppView.HELP ? (
+          <HelpView />
         ) : currentView === AppView.PROFILE ? (
           <ProfileView 
             username={location.pathname.startsWith('/users/@') ? location.pathname.split('@')[1] : (profile.handle || profile.username)}
@@ -2177,6 +2207,7 @@ const App: React.FC = () => {
                     triggerError={() => setTriggerError(true)}
                     triggerPayment={triggerPayment}
                     resetTutorial={resetTutorial}
+                    triggerOldBrowser={() => setSimulateOldBrowser(true)}
                   />
                 )}
 

@@ -47,6 +47,7 @@ export enum AppView {
   SEARCH = 'search',
   LEADERBOARD = 'leaderboard',
   CLANS = 'clans',
+  HELP = 'help',
   NOT_FOUND = 'not_found'
 }
 
