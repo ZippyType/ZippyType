@@ -659,13 +659,14 @@ const App: React.FC = () => {
   }, [sfxVolume]);
   useEffect(() => {
     const path = window.location.pathname;
+    if (path === '/legacy' || path === '/legacy.html') {
+      window.location.href = '/legacy.html';
+      return;
+    }
     if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
     } else if (path === '/redirect') {
       setCurrentView(AppView.REDIRECT);
-    } else if (path === '/legacy' || path === '/legacy.html') {
-      // Let the server handle this or just don't show Not Found
-      return;
     } else if (path !== '/') {
       setCurrentView(AppView.NOT_FOUND);
     }
