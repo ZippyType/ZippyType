@@ -25,6 +25,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import OAuthCallback from './components/OAuthCallback';
 import Auth from './components/Auth';
 import PomodoroTimer from './components/PomodoroTimer';
+import MusicControls from './components/MusicControls';
 import Tutorials from './components/Tutorials';
 import AISettings from './components/settings/AISettings';
 import HardwareSettings from './components/settings/HardwareSettings';
@@ -1697,18 +1698,93 @@ const App: React.FC = () => {
 
   if (simulateOldBrowser) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-slate-950 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md space-y-6">
-          <div className="w-20 h-20 bg-rose-500/10 text-rose-500 rounded-3xl flex items-center justify-center mx-auto border border-rose-500/20">
-            <ShieldAlert size={40} />
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#020617',
+        color: '#f8fafc',
+        fontFamily: '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif',
+        textAlign: 'center',
+        padding: '20px',
+        boxSizing: 'border-box',
+        margin: '0',
+        overflow: 'hidden',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999
+      }}>
+        <div style={{
+          maxWidth: '480px',
+          width: '100%',
+          background: 'rgba(30,41,59,0.5)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          padding: '48px',
+          borderRadius: '40px',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(20px)'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: '#f43f5e',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px',
+            position: 'relative'
+          }}>
+            <div style={{ width: '32px', height: '4px', background: 'white', transform: 'rotate(45deg)', position: 'absolute' }}></div>
+            <div style={{ width: '32px', height: '4px', background: 'white', transform: 'rotate(-45deg)', position: 'absolute' }}></div>
           </div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-tighter">Your Browser is not supported</h1>
-          <p className="text-slate-400 text-sm font-medium leading-relaxed">
-            Please upgrade your browser to use ZippyType. We use modern web technologies that are not available in older browsers.
-          </p>
+          <h1 style={{ fontSize: '28px', marginBottom: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.02em', color: '#ffffff' }}>Browser Not Supported</h1>
+          <p style={{ fontSize: '16px', opacity: 0.7, lineHeight: 1.6, marginBottom: '32px', fontWeight: 500 }}>Your browser version is too old to run ZippyType. Please update to a modern version for the best experience.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+            <a 
+              href="/legacy.html" 
+              style={{
+                display: 'block',
+                background: '#6366f1',
+                color: 'white',
+                textDecoration: 'none',
+                padding: '16px',
+                borderRadius: '16px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontSize: '14px'
+              }}
+            >
+              Launch Legacy Mode
+            </a>
+            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '24px', padding: '24px', textAlign: 'left', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <p style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', marginBottom: '12px' }}>Minimum Requirements:</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#cbd5e1' }}>
+                <div>Chrome 100+</div><div>Firefox 100+</div>
+                <div>Safari 15+</div><div>Edge 100+</div>
+                <div>Opera 86+</div><div>iOS 15+</div>
+              </div>
+            </div>
+          </div>
           <button 
             onClick={() => setSimulateOldBrowser(false)}
-            className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+            style={{
+              marginTop: '32px',
+              padding: '12px 24px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              color: '#94a3b8',
+              fontSize: '11px',
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              cursor: 'pointer'
+            }}
           >
             Exit Simulation
           </button>
@@ -1732,7 +1808,8 @@ const App: React.FC = () => {
         <div className="absolute inset-0 bg-slate-950/20" />
       </div>
       {showAuth && <Auth onClose={() => setShowAuth(false)} />}
-      {user && pomodoroSettings.enabled && <PomodoroTimer settings={pomodoroSettings} />}
+      {pomodoroSettings.enabled && <PomodoroTimer settings={pomodoroSettings} />}
+      <MusicControls />
       <BuyMeACoffeeWidget offsetBottom={user && pomodoroSettings.enabled ? 200 : 18} />
       
       {showGeminiError && (
@@ -2000,14 +2077,16 @@ const App: React.FC = () => {
               <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
                 <BookOpen size={18} />
               </button>
-              <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
+              <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
                 <Activity size={18} />
+                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
               </button>
               <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
                 <Search size={18} />
               </button>
-              <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
+              <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
                 <SettingsIcon size={18} />
+                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
               </button>
             </div>
             

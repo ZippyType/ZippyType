@@ -9,19 +9,81 @@
   <link rel="icon" type="image/png" href="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" />
   <script>
     (function() {
-      // Basic HTML5 feature detection
-      var isSupported = !!(window.CanvasRenderingContext2D && window.localStorage && window.addEventListener);
+      var ua = navigator.userAgent;
+      var isSupported = true;
+      
+      function getVer(regex) {
+        var match = ua.match(regex);
+        return match ? parseInt(match[1]) : null;
+      }
+
+      var chromeVer = getVer(/Chrome\/(\d+)/);
+      var firefoxVer = getVer(/Firefox\/(\d+)/);
+      var safariVer = getVer(/Version\/(\d+).*Safari/);
+      var edgeVer = getVer(/Edge?\/(\d+)/);
+      var operaVer = getVer(/(?:OPR|Opera)\/(\d+)/);
+      
+      var isIOS = /iPad|iPhone|iPod/.test(ua);
+      var iosVer = null;
+      if (isIOS) {
+        var match = ua.match(/OS (\d+)_/);
+        iosVer = match ? parseInt(match[1]) : null;
+      }
+
+      if (edgeVer !== null) {
+        if (edgeVer < 100) isSupported = false;
+      } else if (operaVer !== null) {
+        if (operaVer < 86) isSupported = false;
+      } else if (chromeVer !== null) {
+        if (chromeVer < 100) isSupported = false;
+      } else if (firefoxVer !== null) {
+        if (firefoxVer < 100) isSupported = false;
+      } else if (isIOS) {
+        if (iosVer !== null && iosVer < 15) isSupported = false;
+      } else if (safariVer !== null) {
+        if (safariVer < 15) isSupported = false;
+      }
+
+      if (!window.localStorage || !window.addEventListener || !window.Promise || !window.requestAnimationFrame) {
+        isSupported = false;
+      }
+
       if (!isSupported) {
         document.documentElement.className += ' browser-not-supported';
-        window.onload = function() {
+        var showMessage = function() {
           document.body.innerHTML = 
-            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#f8fafc;font-family:sans-serif;text-align:center;padding:20px;box-sizing:border-box;">' +
-              '<div style="max-width:400px;width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);padding:40px;border-radius:32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">' +
-                '<h1 style="font-size:24px;margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:-0.05em;color:#f43f5e;">Your Browser is not supported.</h1>' +
-                '<p style="font-size:16px;opacity:0.8;line-height:1.6;">Please upgrade your browser to use ZippyType.</p>' +
+            '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#020617;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;text-align:center;padding:20px;box-sizing:border-box;margin:0;overflow:hidden;">' +
+              '<div style="max-width:480px;width:100%;background:rgba(30,41,59,0.5);border:1px solid rgba(255,255,255,0.1);padding:48px;border-radius:40px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.8);backdrop-filter:blur(20px);">' +
+                '<div style="width:64px;height:64px;background:#f43f5e;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;position:relative;">' +
+                  '<div style="width:32px;height:4px;background:white;transform:rotate(45deg);position:absolute;"></div>' +
+                  '<div style="width:32px;height:4px;background:white;transform:rotate(-45deg);position:absolute;"></div>' +
+                '</div>' +
+                '<h1 style="font-size:28px;margin-bottom:16px;font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;color:#ffffff;">Browser Not Supported</h1>' +
+                '<p style="font-size:16px;opacity:0.7;line-height:1.6;margin-bottom:32px;font-weight:500;">Your browser version is too old to run ZippyType. Please update to a modern version for the best experience.</p>' +
+                '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:32px;">' +
+                  '<a href="/legacy.html" style="display:block;background:#6366f1;color:white;text-decoration:none;padding:16px;border-radius:16px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;font-size:14px;transition:all 0.2s;">Launch Legacy Mode</a>' +
+                  '<div style="background:rgba(0,0,0,0.2);border-radius:24px;padding:24px;text-align:left;border:1px solid rgba(255,255,255,0.05);">' +
+                    '<p style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:12px;">Minimum Requirements:</p>' +
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;font-weight:600;color:#cbd5e1;">' +
+                      '<div>Chrome 100+</div><div>Firefox 100+</div>' +
+                      '<div>Safari 15+</div><div>Edge 100+</div>' +
+                      '<div>Opera 86+</div><div>iOS 15+</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<p style="margin-top:32px;font-size:11px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">ZippyType &copy; 2026</p>' +
               '</div>' +
             '</div>';
+          document.body.style.margin = '0';
+          document.body.style.overflow = 'hidden';
         };
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', showMessage);
+        } else {
+          showMessage();
+        }
+        window.stop();
+        throw new Error("Browser not supported");
       }
     })();
   </script>

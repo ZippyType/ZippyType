@@ -9,41 +9,55 @@ interface AccountSettingsProps {
 }
 
 const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setProfile }) => {
-  const [newUsername, setNewUsername] = useState(profile.username || '');
+  const [displayName, setDisplayName] = useState(profile.username || '');
+  const [handle, setHandle] = useState(profile.handle || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleUpdateUsername = async () => {
-    if (!newUsername || newUsername === profile.username) return;
+  const handleUpdateProfile = async () => {
+    if (!displayName.trim()) {
+      setError("Display name cannot be empty.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      // Check if username is taken
-      const { data: existing } = await supabase
-        .from('usernames')
-        .select('user_id')
-        .eq('username', newUsername.toLowerCase())
-        .single();
+      const sanitizedHandle = handle.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      
+      if (sanitizedHandle && sanitizedHandle !== profile.handle) {
+        // Check if handle is taken
+        const { data: existing } = await supabase
+          .from('usernames')
+          .select('user_id')
+          .eq('username', sanitizedHandle)
+          .single();
 
-      if (existing && existing.user_id !== user.id) {
-        throw new Error("Username is already taken.");
+        if (existing && existing.user_id !== user.id) {
+          throw new Error("Pilot handle is already taken.");
+        }
+
+        // Update usernames table
+        const { error: unError } = await supabase
+          .from('usernames')
+          .upsert({ user_id: user.id, username: sanitizedHandle });
+
+        if (unError) throw unError;
       }
 
-      // Update usernames table
-      const { error: unError } = await supabase
-        .from('usernames')
-        .upsert({ user_id: user.id, username: newUsername.toLowerCase() });
-
-      if (unError) throw unError;
-
       // Update profile state
-      setProfile({ ...profile, username: newUsername.toLowerCase() });
-      setSuccess("Username updated successfully!");
+      const updatedProfile = { 
+        ...profile, 
+        username: displayName.trim(),
+        handle: sanitizedHandle || profile.handle 
+      };
+      setProfile(updatedProfile);
+      setHandle(sanitizedHandle || profile.handle);
+      setSuccess("Profile updated successfully!");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -84,30 +98,46 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setPro
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Username Section */}
+        {/* Profile Section */}
         <div className="p-8 glass border border-white/10 rounded-[2rem] space-y-6">
           <div className="flex items-center gap-3">
             <User size={18} className="text-emerald-400" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">Change Pilot Handle</h3>
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">Profile Identity</h3>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">New Username</label>
+              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">Display Name</label>
               <input 
                 type="text" 
-                value={newUsername}
-                onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
-                placeholder="new_handle"
-                maxLength={20}
+                placeholder="Zippy Pilot"
+                maxLength={30}
               />
+              <p className="text-[9px] text-slate-500 font-medium ml-1">This is how you'll appear on leaderboards and in races.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">Pilot Handle (@)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">@</span>
+                <input 
+                  type="text" 
+                  value={handle}
+                  onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                  placeholder="handle"
+                  maxLength={20}
+                />
+              </div>
+              <p className="text-[9px] text-slate-500 font-medium ml-1">Your unique identifier for profiles and clans.</p>
             </div>
             <button 
-              onClick={handleUpdateUsername}
-              disabled={loading || newUsername === profile.username}
+              onClick={handleUpdateProfile}
+              disabled={loading || (displayName === profile.username && handle === profile.handle)}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20"
             >
-              {loading ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Update Username"}
+              {loading ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Save Profile Changes"}
             </button>
           </div>
         </div>

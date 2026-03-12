@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Clock, X } from 'lucide-react';
 import { PomodoroSettings } from '../types';
 
 interface PomodoroTimerProps {
@@ -10,6 +10,7 @@ interface PomodoroTimerProps {
 const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ settings }) => {
   const [secondsLeft, setSecondsLeft] = useState(settings.defaultMinutes * 60);
   const [isActive, setIsActive] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true); // Default to "Closed" state
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -57,8 +58,27 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ settings }) => {
 
   if (!settings.enabled) return null;
 
+  if (isMinimized) {
+    return (
+      <button 
+        onClick={() => setIsMinimized(false)}
+        className="fixed bottom-6 right-6 w-10 h-10 bg-indigo-600 text-white rounded-full shadow-2xl z-[70] flex items-center justify-center hover:scale-110 transition-all border border-white/20"
+        title="Open Pomodoro Timer"
+      >
+        <Clock size={18} />
+      </button>
+    );
+  }
+
   return (
-    <div className={`fixed bottom-6 right-6 glass border border-white/10 rounded-2xl shadow-2xl z-40 transition-all hover:scale-105 group ${sizeClasses[settings.size]}`}>
+    <div className={`fixed bottom-6 right-6 glass border border-white/10 rounded-2xl shadow-2xl z-[70] transition-all group ${sizeClasses[settings.size]}`}>
+      <button 
+        onClick={() => setIsMinimized(true)}
+        className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all z-50"
+      >
+        <X size={12} />
+      </button>
+
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between opacity-50 group-hover:opacity-100 transition-opacity">
           <span className="font-black uppercase tracking-widest text-[8px]">Focus Session</span>
