@@ -15,6 +15,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRedirectUris, setNewRedirectUris] = useState('');
+  const [editingApp, setEditingApp] = useState<OAuthApp | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editRedirectUris, setEditRedirectUris] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,6 +66,28 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
     }
   };
 
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingApp || !editName || !editRedirectUris) return;
+
+    try {
+      const response = await fetch(`/api/oauth/apps/${editingApp.id}?userId=${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName,
+          redirectUris: editRedirectUris.split(',').map(u => u.trim())
+        })
+      });
+      const data = await response.json();
+      setApps(apps.map(a => a.id === editingApp.id ? data : a));
+      setEditingApp(null);
+      setEditName('');
+      setEditRedirectUris('');
+    } catch (error) {
+      console.error('Error editing app:', error);
+    }
+  };
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this OAuth app?')) return;
     try {
@@ -153,6 +178,53 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
         </motion.div>
       )}
 
+      {editingApp && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8"
+        >
+          <h2 className="text-xl font-bold text-white mb-4">Edit OAuth Application</h2>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div>
+              <label className="block text-slate-400 text-xs font-bold uppercase mb-2">App Name</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-slate-400 text-xs font-bold uppercase mb-2">Redirect URIs (comma separated)</label>
+              <input
+                type="text"
+                value={editRedirectUris}
+                onChange={(e) => setEditRedirectUris(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+                required
+              />
+            </div>
+            <div className="flex gap-4 pt-2">
+              <button
+                type="submit"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold transition-colors"
+              >
+                Save Changes
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingApp(null)}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
@@ -172,12 +244,24 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
                   <h3 className="text-xl font-bold text-white mb-1">{app.name}</h3>
                   <p className="text-slate-400 text-xs font-mono">ID: {app.id}</p>
                 </div>
-                <button
-                  onClick={() => handleDelete(app.id)}
-                  className="text-slate-500 hover:text-rose-500 transition-colors"
-                >
-                  <Trash2 size={20} />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingApp(app);
+                      setEditName(app.name);
+                      setEditRedirectUris(app.redirect_uris.join(', '));
+                    }}
+                    className="text-slate-500 hover:text-indigo-500 transition-colors"
+                  >
+                    <Code size={20} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(app.id)}
+                    className="text-slate-500 hover:text-rose-500 transition-colors"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
               </div>
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
