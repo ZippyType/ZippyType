@@ -376,8 +376,9 @@ async function startServer() {
              const lang = ['javascript', 'python', 'typescript', 'java', 'c++'][Math.floor(Math.random() * 5)];
              prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet. 
              It should be approximately ${textLength === 'short' ? '2-3' : textLength === 'medium' ? '4-6' : '8-12'} lines of code.
-             Do not include comments. Do not include markdown code blocks. Just the raw code.
-             Ensure indentation is consistent (2 or 4 spaces).`;
+             Do not include comments. Do not include markdown code blocks (like \`\`\`). Just the raw code.
+             Ensure indentation is consistent (2 or 4 spaces).
+             CRITICAL: Return ONLY the code itself. No explanations.`;
           } else {
             let lengthConstraint = "exactly 10 to 13 words total";
             if (textLength === 'short') lengthConstraint = "exactly 6 to 8 words total";
@@ -389,23 +390,33 @@ async function startServer() {
             if (problemKeys && problemKeys.length > 0) {
               prompt += `The text MUST frequently use these specific characters: ${problemKeys.join(', ')}. `;
             }
-            prompt += `CRITICAL: The text MUST be ${lengthConstraint}. Count the words carefully. Return ONLY the text itself.`;
+            prompt += `CRITICAL: The text MUST be ${lengthConstraint}. Count the words carefully. Return ONLY a single sentence. No quotes. No extra spaces.`;
           }
 
           const response = await client.chat.completions.create({
             messages: [
-              { role: "system", content: "You are a helpful assistant that generates typing practice texts. You follow length constraints perfectly." },
+              { role: "system", content: "You are a helpful assistant that generates typing practice texts. You follow length constraints perfectly and return only the requested text without any formatting or markdown." },
               { role: "user", content: prompt }
             ],
             model: "gpt-4o",
-            temperature: 0.8,
-            max_tokens: 150,
+            temperature: 0.7,
+            max_tokens: 200,
           });
 
-          const text = response.choices[0].message.content;
+          let text = response.choices[0].message.content;
           if (!text) throw new Error("No text generated");
 
-          return res.json({ text });
+          // Post-processing
+          text = text.trim();
+          if (mode === 'code') {
+            text = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
+          } else {
+            // Ensure single sentence if it generated multiple
+            const sentences = text.split(/[.!?]\s+/);
+            if (sentences.length > 1) text = sentences[0] + (text.match(/[.!?]/)?.[0] || '.');
+          }
+
+          return res.json({ text: text.trim() });
         } catch (e) {
           console.error(`Token ${token.token_name} failed:`, e);
           // Mark as out and try next if it's a DB token
@@ -424,9 +435,9 @@ async function startServer() {
           let prompt = "";
           if (mode === 'code') {
              const lang = ['javascript', 'python', 'typescript', 'java', 'c++'][Math.floor(Math.random() * 5)];
-             prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet. Length: ${textLength === 'short' ? '2-3 lines' : '4-6 lines'}. No markdown.`;
+             prompt = `Generate a valid, clean, and idiomatic ${lang} code snippet. Length: ${textLength === 'short' ? '2-3 lines' : '4-6 lines'}. No markdown. Return ONLY raw code.`;
           } else {
-             prompt = `Generate a single ${difficulty} level typing practice sentence about "${topic || 'General'}". Language: ${language || 'en'}. Length: ${textLength === 'short' ? '6-8 words' : textLength === 'long' ? '20-25 words' : '10-13 words'}. Return ONLY the text.`;
+             prompt = `Generate a single ${difficulty} level typing practice sentence about "${topic || 'General'}". Language: ${language || 'en'}. Length: ${textLength === 'short' ? '6-8 words' : textLength === 'long' ? '20-25 words' : '10-13 words'}. Return ONLY a single sentence. No quotes.`;
           }
           
           const response = await ai.models.generateContent({
@@ -434,7 +445,14 @@ async function startServer() {
             contents: prompt,
           });
           if (response.text) {
-            return res.json({ text: response.text.trim() });
+            let text = response.text.trim();
+            if (mode === 'code') {
+              text = text.replace(/```[a-z]*\n?/g, '').replace(/```/g, '');
+            } else {
+              const sentences = text.split(/[.!?]\s+/);
+              if (sentences.length > 1) text = sentences[0] + (text.match(/[.!?]/)?.[0] || '.');
+            }
+            return res.json({ text: text.trim() });
           }
         } catch (geminiError) {
           console.error('Server Gemini fallback failed:', geminiError);

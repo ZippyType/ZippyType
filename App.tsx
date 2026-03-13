@@ -7,7 +7,7 @@ import {
   Gamepad2, LogOut, X, Volume2, VolumeX, Github, Globe, User, EyeOff, Eye, 
   Activity, Dna, Clock, Lock, ShieldAlert, AlertCircle, Timer, Download, Upload, FileJson,
   BookOpen, Book, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search, FileText,
-  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal
+  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal, Share2
 } from 'lucide-react';
 import { useTranslation } from './src/LanguageContext';
 import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement, Quest, ReplayEvent } from './types';
@@ -78,7 +78,13 @@ const POWER_UP_REFS = {
   [PowerUpType.SLOW_OPPONENTS]: { label: 'SLOW', icon: '🐢', description: 'Slow down AI for 5s' }
 };
 
-const normalizeText = (text: string) => text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, "-").replace(/…/g, "...");
+const normalizeText = (text: string, isCode: boolean = false) => {
+  let cleaned = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, "-").replace(/…/g, "...");
+  if (!isCode) {
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  }
+  return cleaned;
+};
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -1131,7 +1137,7 @@ const App: React.FC = () => {
       }
       
       if (rid !== requestCounter.current) return;
-      const cleaned = normalizeText(text.trim());
+      const cleaned = normalizeText(text, gameMode === GameMode.CODE || currentMode === GameMode.CODE);
       setCurrentText(cleaned); setLoading(false); runTypewriter(cleaned);
     } catch (e: any) {
       console.error("AI text generation failed.", e);
@@ -1455,13 +1461,24 @@ const App: React.FC = () => {
       const scoreIncrement = Math.max(0, currentText.length - errors);
       if (scoreIncrement > 0) {
         try {
+          // Ensure we have a username
+          const username = profile.username || user.email?.split('@')[0] || 'Pilot';
           await supabase.rpc('update_leaderboard_score', { 
             p_user_id: user.id, 
-            p_username: profile.username, 
+            p_username: username, 
             p_score_increment: scoreIncrement 
           });
         } catch (err) {
           console.error("Failed to update leaderboard:", err);
+        }
+      }
+
+      // Update problem keys for adaptive mode
+      if (errors > 0) {
+        const keysWithErrors = Object.keys(errorMap).filter(k => k.length === 1);
+        if (keysWithErrors.length > 0) {
+          const newProblemKeys = Array.from(new Set([...problemKeys, ...keysWithErrors])).slice(-15);
+          setProblemKeys(newProblemKeys);
         }
       }
     } else if (mode === GameMode.SOLO) {
@@ -2754,12 +2771,21 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full text-left font-medium drop-shadow-glow">
+                    <div className="w-full text-left font-medium drop-shadow-glow whitespace-pre-wrap">
                       {currentText.split('').map((c, i) => {
-                        if (c === '\n') return <br key={i} />;
                         const isTyped = i < userInput.length;
                         const isCorrect = isTyped && userInput[i] === c;
                         const isCurrent = i === userInput.length;
+                        
+                        if (c === '\n') {
+                          return (
+                            <span key={i} className="relative inline-block">
+                              <span className={`text-[10px] opacity-30 ${isTyped ? (isCorrect ? 'text-emerald-500' : 'text-rose-500') : 'text-slate-500'}`}>↵</span>
+                              <br />
+                            </span>
+                          );
+                        }
+
                         return (
                           <motion.span 
                             key={i} 
@@ -2800,7 +2826,7 @@ const App: React.FC = () => {
       </div>
       <SpeedInsights />
       <Analytics />
-      <footer className="w-full max-w-4xl py-6 flex justify-center items-center gap-8">
+      <footer className="w-full max-w-4xl py-6 flex justify-center items-center gap-8 flex-wrap">
         <a 
           href="/pandc"
           onClick={(e) => {
@@ -2819,6 +2845,23 @@ const App: React.FC = () => {
         >
            <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2]"></span> Discord
         </a>
+        <button 
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({
+                title: 'ZippyType',
+                text: 'Check out ZippyType - The ultimate typing experience!',
+                url: window.location.origin
+              });
+            } else {
+              navigator.clipboard.writeText(window.location.origin);
+              alert("Link copied to clipboard!");
+            }
+          }}
+          className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-colors flex items-center gap-2"
+        >
+          <Share2 size={12} /> Share
+        </button>
         <a 
           href="https://x.com/ZippyType/"
           target="_blank"
