@@ -47,6 +47,8 @@ import DailyQuests from './components/DailyQuests';
 import AccountSettings from './components/AccountSettings';
 import ProfileView from './components/ProfileView';
 import HelpView from './components/HelpView';
+import DeveloperDashboard from './components/DeveloperDashboard';
+import OAuthAuthorize from './components/OAuthAuthorize';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
@@ -449,6 +451,10 @@ const App: React.FC = () => {
       else if (path.includes('/ai')) setActiveSettingsTab('ai');
       else if (path.includes('/account')) setActiveSettingsTab('account');
       else setActiveSettingsTab('general');
+    } else if (path === '/developer') {
+      setCurrentView(AppView.DEVELOPER);
+    } else if (path === '/oauth/authorize') {
+      setCurrentView(AppView.OAUTH_AUTHORIZE);
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
     } else {
@@ -2077,70 +2083,73 @@ const App: React.FC = () => {
             {outTokensCount} out of 10 are not available. We are fixing it as Zippy as possible.
           </div>
         )}
-        <header className="flex flex-col md:flex-row justify-between items-center gap-6 glass rounded-[1.75rem] p-6 shadow-2xl relative overflow-hidden border border-white/10">
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="relative group shrink-0">
-              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-              <img 
-                src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" 
-                alt="ZippyType" 
-                className="relative w-12 h-12 md:w-14 md:h-14 object-cover rounded-full border border-white/10 shadow-2xl"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl md:text-3xl font-black tracking-[-0.08em] leading-none mb-1 flex flex-col italic truncate">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-500 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">ZIPPYTYPE</span>
-              </h1>
-              <div className="flex items-center gap-2">
-                <div className="h-[1px] w-4 bg-emerald-500/30 shrink-0"></div>
-                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em] shrink-0">PILOT:</span>
-                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.handle || profile.username}</span>
+        
+        {currentView !== AppView.REDIRECT && (
+          <header className="flex flex-col md:flex-row justify-between items-center gap-6 glass rounded-[1.75rem] p-6 shadow-2xl relative overflow-hidden border border-white/10">
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="relative group shrink-0">
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <img 
+                  src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" 
+                  alt="ZippyType" 
+                  className="relative w-12 h-12 md:w-14 md:h-14 object-cover rounded-full border border-white/10 shadow-2xl"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-2xl md:text-3xl font-black tracking-[-0.08em] leading-none mb-1 flex flex-col italic truncate">
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-500 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">ZIPPYTYPE</span>
+                </h1>
+                <div className="flex items-center gap-2">
+                  <div className="h-[1px] w-4 bg-emerald-500/30 shrink-0"></div>
+                  <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.3em] shrink-0">PILOT:</span>
+                  <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.handle || profile.username}</span>
+                </div>
               </div>
             </div>
-          </div>
-          <nav className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
-            <div className="flex bg-black/50 p-1 rounded-2xl border border-white/5 shadow-lg shrink-0">
-              <button onClick={() => navigate('/')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={18} /></button>
-              <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
-                <User size={18} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
-              </button>
-              <button onClick={() => navigate('/leaderboard')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
-                <Trophy size={18} />
-              </button>
-              <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Clans">
-                <Users size={18} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
-              </button>
-              <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
-                <BookOpen size={18} />
-              </button>
-              <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
-                <Activity size={18} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
-              </button>
-              <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
-                <Search size={18} />
-              </button>
-              <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
-                <SettingsIcon size={18} />
-                {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
-              </button>
-            </div>
-            
-            <div className="flex items-center gap-2 shrink-0">
-              {!profile.is_pro && user && !user.is_ip_persistent && (
-                <button onClick={() => navigate('/settings/billing')} className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
-                  <Crown size={12} />
-                  PRO
+            <nav className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+              <div className="flex bg-black/50 p-1 rounded-2xl border border-white/5 shadow-lg shrink-0">
+                <button onClick={() => navigate('/')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={18} /></button>
+                <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
+                  <User size={18} />
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
                 </button>
-              )}
-              <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
-              {user ? (<button onClick={() => supabase.auth.signOut()} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={18} /></button>) : (<button onClick={() => navigate('/login')} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
-            </div>
-          </nav>
-        </header>
+                <button onClick={() => navigate('/leaderboard')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
+                  <Trophy size={18} />
+                </button>
+                <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Clans">
+                  <Users size={18} />
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                </button>
+                <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
+                  <BookOpen size={18} />
+                </button>
+                <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
+                  <Activity size={18} />
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                </button>
+                <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
+                  <Search size={18} />
+                </button>
+                <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
+                  <SettingsIcon size={18} />
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                {!profile.is_pro && user && !user.is_ip_persistent && (
+                  <button onClick={() => navigate('/settings/billing')} className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                    <Crown size={12} />
+                    PRO
+                  </button>
+                )}
+                <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
+                {user ? (<button onClick={() => supabase.auth.signOut()} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={18} /></button>) : (<button onClick={() => navigate('/login')} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
+              </div>
+            </nav>
+          </header>
+        )}
 
         {currentView === AppView.SEARCH ? (
           <ZippySearch />
@@ -2150,6 +2159,10 @@ const App: React.FC = () => {
           <ClanView user={user} profile={profile} />
         ) : currentView === AppView.HELP ? (
           <HelpView />
+        ) : currentView === AppView.DEVELOPER ? (
+          <DeveloperDashboard user={user} />
+        ) : currentView === AppView.OAUTH_AUTHORIZE ? (
+          <OAuthAuthorize user={user} />
         ) : currentView === AppView.PROFILE ? (
           <ProfileView 
             username={location.pathname.startsWith('/users/@') ? location.pathname.split('@')[1] : (profile.handle || profile.username)}

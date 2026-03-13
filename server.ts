@@ -465,6 +465,229 @@ async function startServer() {
     }
   });
 
+  // --- OAuth Provider Endpoints ---
+
+  // 1. Manage OAuth Apps
+  app.get('/api/oauth/apps', async (req, res) => {
+    const userId = req.query.userId as string;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('oauth_apps')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/oauth/apps', async (req, res) => {
+    const { userId, name, redirectUris } = req.body;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const clientId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const clientSecret = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('oauth_apps')
+        .insert({
+          user_id: userId,
+          name,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uris: redirectUris
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/oauth/apps/:id', async (req, res) => {
+    const { id } = req.params;
+    const userId = req.query.userId as string;
+
+    try {
+      const { error } = await supabaseAdmin
+        .from('oauth_apps')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // 2. OAuth Authorization Flow
+  app.get('/api/oauth/client-info', async (req, res) => {
+    const { client_id } = req.query;
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('oauth_apps')
+        .select('name, redirect_uris')
+        .eq('client_id', client_id)
+        .single();
+      
+      if (error || !data) return res.status(404).json({ error: 'App not found' });
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/oauth/authorize', async (req, res) => {
+    const { client_id, redirect_uri, userId } = req.body;
+    
+    try {
+      // Validate client and redirect URI
+      const { data: app, error: appError } = await supabaseAdmin
+        .from('oauth_apps')
+        .select('*')
+        .eq('client_id', client_id)
+        .single();
+      
+      if (appError || !app) return res.status(404).json({ error: 'App not found' });
+      if (!app.redirect_uris.includes(redirect_uri)) {
+        return res.status(400).json({ error: 'Invalid redirect URI' });
+      }
+
+      // Generate code
+      const code = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
+
+      const { error: codeError } = await supabaseAdmin
+        .from('oauth_codes')
+        .insert({
+          code,
+          client_id,
+          user_id: userId,
+          expires_at: expiresAt
+        });
+      
+      if (codeError) throw codeError;
+
+      res.json({ code });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/oauth/token', async (req, res) => {
+    const { client_id, client_secret, code, grant_type, redirect_uri } = req.body;
+
+    if (grant_type !== 'authorization_code') {
+      return res.status(400).json({ error: 'Unsupported grant type' });
+    }
+
+    try {
+      // 1. Validate client
+      const { data: app, error: appError } = await supabaseAdmin
+        .from('oauth_apps')
+        .select('*')
+        .eq('client_id', client_id)
+        .eq('client_secret', client_secret)
+        .single();
+      
+      if (appError || !app) return res.status(401).json({ error: 'Invalid client credentials' });
+
+      // 2. Validate code
+      const { data: oauthCode, error: codeError } = await supabaseAdmin
+        .from('oauth_codes')
+        .select('*')
+        .eq('code', code)
+        .eq('client_id', client_id)
+        .eq('used', false)
+        .single();
+      
+      if (codeError || !oauthCode) return res.status(400).json({ error: 'Invalid or expired code' });
+      if (new Date(oauthCode.expires_at) < new Date()) {
+        return res.status(400).json({ error: 'Code expired' });
+      }
+
+      // 3. Mark code as used
+      await supabaseAdmin.from('oauth_codes').update({ used: true }).eq('code', code);
+
+      // 4. Generate tokens
+      const accessToken = 'zt_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const refreshToken = 'zt_rf_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+
+      const { error: tokenError } = await supabaseAdmin
+        .from('oauth_tokens')
+        .insert({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          client_id,
+          user_id: oauthCode.user_id,
+          expires_at: expiresAt
+        });
+      
+      if (tokenError) throw tokenError;
+
+      res.json({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: 'Bearer',
+        expires_in: 86400
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/oauth/userinfo', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid token' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const { data: oauthToken, error: tokenError } = await supabaseAdmin
+        .from('oauth_tokens')
+        .select('user_id, expires_at')
+        .eq('access_token', token)
+        .single();
+      
+      if (tokenError || !oauthToken) return res.status(401).json({ error: 'Invalid token' });
+      if (new Date(oauthToken.expires_at) < new Date()) {
+        return res.status(401).json({ error: 'Token expired' });
+      }
+
+      // Get user profile
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', oauthToken.user_id)
+        .single();
+      
+      if (profileError || !profile) return res.status(404).json({ error: 'User not found' });
+
+      res.json({
+        sub: profile.id,
+        username: profile.username,
+        handle: profile.handle,
+        avatar: profile.avatar,
+        is_pro: profile.is_pro
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Socket.io logic
   const rooms = new Map();
 

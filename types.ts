@@ -48,7 +48,27 @@ export enum AppView {
   LEADERBOARD = 'leaderboard',
   CLANS = 'clans',
   HELP = 'help',
+  DEVELOPER = 'developer',
+  OAUTH_AUTHORIZE = 'oauth_authorize',
   NOT_FOUND = 'not_found'
+}
+
+export interface OAuthApp {
+  id: string;
+  user_id: string;
+  name: string;
+  client_id: string;
+  client_secret: string;
+  redirect_uris: string[];
+  created_at: string;
+}
+
+export interface OAuthCode {
+  code: string;
+  client_id: string;
+  user_id: string;
+  expires_at: string;
+  used: boolean;
 }
 
 export enum SoundProfile {
