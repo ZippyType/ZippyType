@@ -667,7 +667,7 @@ async function startServer() {
         return res.status(401).json({ error: 'Token expired' });
       }
 
-      // Get user profile
+      // Get user profile from Supabase
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
         .select('*')

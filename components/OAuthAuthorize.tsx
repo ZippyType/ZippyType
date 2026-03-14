@@ -23,8 +23,8 @@ const OAuthAuthorize: React.FC<OAuthAuthorizeProps> = ({ user }) => {
   const responseType = query.get('response_type');
 
   useEffect(() => {
-    if (!clientId || !redirectUri || responseType !== 'code') {
-      setError('Invalid OAuth request parameters.');
+    if (!clientId) {
+      setError('Missing client_id parameter.');
       setLoading(false);
       return;
     }
@@ -38,7 +38,9 @@ const OAuthAuthorize: React.FC<OAuthAuthorizeProps> = ({ user }) => {
       if (!response.ok) throw new Error('Application not found');
       const data = await response.json();
       
-      if (!data.redirect_uris.includes(redirectUri)) {
+      // If redirectUri is provided, validate it. 
+      // If not, we'll use the first one from the app's registered URIs during authorization.
+      if (redirectUri && !data.redirect_uris.includes(redirectUri)) {
         throw new Error('Redirect URI mismatch');
       }
       
@@ -51,9 +53,12 @@ const OAuthAuthorize: React.FC<OAuthAuthorizeProps> = ({ user }) => {
   };
 
   const handleAuthorize = async () => {
-    if (!user) {
-      // If not logged in, the main App should have redirected to Auth
-      // but just in case:
+    if (!user) return;
+
+    const finalRedirectUri = redirectUri || (clientInfo?.redirect_uris && clientInfo.redirect_uris[0]);
+    
+    if (!finalRedirectUri) {
+      setError('No redirect URI specified or found for this application.');
       return;
     }
 
@@ -64,14 +69,14 @@ const OAuthAuthorize: React.FC<OAuthAuthorizeProps> = ({ user }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_id: clientId,
-          redirect_uri: redirectUri,
+          redirect_uri: finalRedirectUri,
           userId: user.id
         })
       });
       
       const data = await response.json();
       if (data.code) {
-        const url = new URL(redirectUri!);
+        const url = new URL(finalRedirectUri);
         url.searchParams.append('code', data.code);
         window.location.href = url.toString();
       } else {

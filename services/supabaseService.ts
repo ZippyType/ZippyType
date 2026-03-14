@@ -65,15 +65,15 @@ async function getIP(): Promise<string> {
   
   for (const service of services) {
     try {
-      const res = await fetch(service, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(service, { signal: AbortSignal.timeout(2000) });
       if (!res.ok) continue;
       const data = await res.json();
       return data.ip || data.ip_address || data.query;
     } catch (e) {
-      console.warn(`IP service ${service} failed:`, e);
+      // Silently fail for individual services to avoid log noise
     }
   }
-  throw new Error("All IP services failed");
+  return "127.0.0.1"; // Fallback to local IP if all services fail
 }
 
 async function hashIP(ip: string): Promise<string> {

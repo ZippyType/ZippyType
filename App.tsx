@@ -453,7 +453,7 @@ const App: React.FC = () => {
       else setActiveSettingsTab('general');
     } else if (path === '/developer') {
       setCurrentView(AppView.DEVELOPER);
-    } else if (path === '/oauth/authorize') {
+    } else if (path.startsWith('/oauth/authorize')) {
       setCurrentView(AppView.OAUTH_AUTHORIZE);
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
@@ -737,7 +737,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.warn("Auth session error:", sessionError.message);
+          if (sessionError.message.includes("Refresh Token")) {
+            await supabase.auth.signOut();
+            localStorage.removeItem('supabase.auth.token');
+          }
+        }
+
         let currentUser = session?.user ?? null;
 
         if (!currentUser) {
@@ -839,7 +848,8 @@ const App: React.FC = () => {
             const used = await checkIpSoloUsage();
             setHasUsedSolo(used);
             setHistory([]);
-            if (window.location.pathname !== '/pandc' && window.location.pathname !== '/redirect') {
+            const restrictedGuestPaths = ['/pandc', '/redirect', '/oauth/authorize', '/developer', '/tutorial', '/leaderboard', '/search'];
+            if (!restrictedGuestPaths.some(p => window.location.pathname.startsWith(p))) {
               setCurrentView(AppView.GAME);
             }
           }

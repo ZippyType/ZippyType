@@ -57,12 +57,16 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
         })
       });
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create app');
+      }
       setApps([...apps, data]);
       setShowCreate(false);
       setNewName('');
       setNewRedirectUris('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating app:', error);
+      alert('Error creating app: ' + error.message + '\n\nPlease ensure the oauth_apps table exists in your Supabase database.');
     }
   };
 
@@ -80,12 +84,16 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
         })
       });
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to edit app');
+      }
       setApps(apps.map(a => a.id === editingApp.id ? data : a));
       setEditingApp(null);
       setEditName('');
       setEditRedirectUris('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error editing app:', error);
+      alert('Error editing app: ' + error.message);
     }
   };
   const handleDelete = async (id: string) => {
@@ -104,14 +112,53 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getButtonCode = (clientId: string) => {
-    const baseUrl = window.location.origin;
-    return `<a href="${baseUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=YOUR_REDIRECT_URI&response_type=code" 
-   style="background: #6366f1; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-family: sans-serif; display: inline-flex; align-items: center; gap: 8px;">
-   <img src="${baseUrl}/api/icon.png" style="width: 20px; height: 20px;" />
-   Login with ZippyType
+  const getHtmlButtonCode = (clientId: string) => {
+    const baseUrl = "https://zippytype.vercel.app";
+    return `<!-- HTML -->
+<a href="${baseUrl}/oauth/authorize?client_id=${clientId}" 
+   style="background: #6366f1; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-family: sans-serif; display: inline-flex; align-items: center; gap: 8px; font-weight: bold;">
+   <img src="${baseUrl}/api/icon.png" style="width: 20px; height: 20px;" alt="ZippyType Logo" />
+   Sign in with ZippyType
 </a>`;
   };
+
+  const getReactButtonCode = (clientId: string) => {
+    const baseUrl = "https://zippytype.vercel.app";
+    return `// React / Next.js
+const ZippyTypeLogin = () => {
+  const loginUrl = "${baseUrl}/oauth/authorize?client_id=${clientId}";
+  
+  return (
+    <a 
+      href={loginUrl}
+      style={{
+        background: '#6366f1', color: 'white', padding: '10px 20px', 
+        borderRadius: '8px', textDecoration: 'none', fontFamily: 'sans-serif', 
+        display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'
+      }}
+    >
+      <img src="${baseUrl}/api/icon.png" style={{ width: 20, height: 20 }} alt="ZippyType Logo" />
+      Sign in with ZippyType
+    </a>
+  );
+};`;
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+        <Shield size={64} className="text-indigo-500 mb-6 animate-pulse" />
+        <h1 className="text-2xl font-bold text-white mb-4">Developer Access</h1>
+        <p className="text-slate-400 mb-8 max-w-md">You need to be logged in to ZippyType to access the Developer Dashboard.</p>
+        <button
+          onClick={() => window.location.href = '/'}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold transition-all"
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -249,7 +296,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
                     onClick={() => {
                       setEditingApp(app);
                       setEditName(app.name);
-                      setEditRedirectUris(app.redirect_uris.join(', '));
+                      setEditRedirectUris((app.redirect_uris || []).join(', '));
                     }}
                     className="text-slate-500 hover:text-indigo-500 transition-colors"
                   >
@@ -298,7 +345,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
                 <div>
                   <label className="block text-slate-500 text-[10px] font-bold uppercase mb-1">Redirect URIs</label>
                   <div className="space-y-1">
-                    {app.redirect_uris.map((uri, i) => (
+                    {(app.redirect_uris || []).map((uri, i) => (
                       <div key={i} className="flex items-center gap-2 text-slate-300 text-sm">
                         <Globe size={14} className="text-slate-500" />
                         {uri}
@@ -311,18 +358,35 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
                       <Code size={16} />
-                      Login Button Code
+                      Sign in with ZippyType (HTML)
                     </div>
                     <button
-                      onClick={() => copyToClipboard(getButtonCode(app.client_id), app.id + 'code')}
+                      onClick={() => copyToClipboard(getHtmlButtonCode(app.client_id), app.id + 'htmlcode')}
                       className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
                     >
-                      {copiedId === app.id + 'code' ? <Check size={12} /> : <Copy size={12} />}
-                      {copiedId === app.id + 'code' ? 'Copied!' : 'Copy Snippet'}
+                      {copiedId === app.id + 'htmlcode' ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedId === app.id + 'htmlcode' ? 'Copied!' : 'Copy HTML'}
+                    </button>
+                  </div>
+                  <pre className="text-[10px] text-slate-500 overflow-x-auto p-3 bg-black/30 rounded border border-slate-800 font-mono mb-4">
+                    {getHtmlButtonCode(app.client_id)}
+                  </pre>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+                      <Code size={16} />
+                      Sign in with ZippyType (React)
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(getReactButtonCode(app.client_id), app.id + 'reactcode')}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                    >
+                      {copiedId === app.id + 'reactcode' ? <Check size={12} /> : <Copy size={12} />}
+                      {copiedId === app.id + 'reactcode' ? 'Copied!' : 'Copy React'}
                     </button>
                   </div>
                   <pre className="text-[10px] text-slate-500 overflow-x-auto p-3 bg-black/30 rounded border border-slate-800 font-mono">
-                    {getButtonCode(app.client_id)}
+                    {getReactButtonCode(app.client_id)}
                   </pre>
                 </div>
               </div>
