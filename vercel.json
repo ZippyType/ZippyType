@@ -2,6 +2,8 @@
   "rewrites": [
     { "source": "/legacy", "destination": "/legacy.html" },
     { "source": "/legacy.html", "destination": "/legacy.html" },
+    { "source": "/oauth/authorize", "destination": "/oauth/authorize.html" },
+    { "source": "/api/oauth/apps/:id", "destination": "/api/oauth/apps?id=:id" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
