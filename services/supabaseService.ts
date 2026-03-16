@@ -392,6 +392,19 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string> 
   const fileName = `profile_pic_${userId}.${fileExt}`;
   const filePath = `${userId}/${fileName}`;
 
+  // List existing files for the user
+  const { data: existingFiles, error: listError } = await supabase.storage
+    .from('profile-pictures')
+    .list(userId);
+
+  if (!listError && existingFiles) {
+    // Delete all existing files for the user
+    const filesToDelete = existingFiles.map(f => `${userId}/${f.name}`);
+    await supabase.storage
+      .from('profile-pictures')
+      .remove(filesToDelete);
+  }
+
   const { error: uploadError } = await supabase.storage
     .from('profile-pictures')
     .upload(filePath, file, { 
