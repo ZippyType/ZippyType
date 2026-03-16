@@ -6,35 +6,48 @@ import { motion } from 'motion/react';
 const OAuthConsent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authDetails, setAuthDetails] = useState<any>(null);
-  const [authorizationId, setAuthorizationId] = useState<string | null>(null);
+  const [clientInfo, setClientInfo] = useState<any>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [redirectUri, setRedirectUri] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
-        const authId = params.get('authorization_id');
+        const cId = params.get('client_id');
+        const rUri = params.get('redirect_uri');
 
-        if (!authId) {
-          throw new Error('Missing authorization_id parameter');
+        if (!cId || !rUri) {
+          throw new Error('Missing client_id or redirect_uri parameters');
         }
-        setAuthorizationId(authId);
+        setClientId(cId);
+        setRedirectUri(rUri);
 
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-          // Redirect to login, preserving the authorization_id
-          window.location.href = `/?redirect=/oauth/consent?authorization_id=${authId}`;
+          // Redirect to login, preserving the current URL
+          window.location.href = `/?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           return;
         }
+        setUserId(user.id);
 
-        const { data, error: detailsError } = await supabase.auth.oauth.getAuthorizationDetails(authId);
-
-        if (detailsError || !data) {
-          throw new Error(detailsError?.message || 'Invalid authorization request');
+        // Fetch client info from our custom API
+        const response = await fetch(`/api/oauth/client-info?client_id=${cId}`);
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error || 'Invalid client_id');
+        }
+        
+        const data = await response.json();
+        
+        // Validate redirect URI
+        if (!data.redirect_uris.includes(rUri)) {
+          throw new Error('Invalid redirect_uri for this client');
         }
 
-        setAuthDetails(data);
+        setClientInfo(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -46,37 +59,41 @@ const OAuthConsent: React.FC = () => {
   }, []);
 
   const handleApprove = async () => {
-    if (!authorizationId) return;
+    if (!clientId || !redirectUri || !userId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId);
-      if (error) throw error;
-      if (data?.redirect_to) {
-        window.location.href = data.redirect_to;
-      } else {
-        throw new Error('No redirect URL provided by Supabase');
+      const response = await fetch('/api/oauth/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          userId: userId
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to authorize');
       }
+
+      const data = await response.json();
+      
+      // Redirect back to the client with the code
+      const url = new URL(redirectUri);
+      url.searchParams.set('code', data.code);
+      window.location.href = url.toString();
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
     }
   };
 
-  const handleDeny = async () => {
-    if (!authorizationId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId);
-      if (error) throw error;
-      if (data?.redirect_to) {
-        window.location.href = data.redirect_to;
-      } else {
-        throw new Error('No redirect URL provided by Supabase');
-      }
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
+  const handleDeny = () => {
+    if (!redirectUri) return;
+    const url = new URL(redirectUri);
+    url.searchParams.set('error', 'access_denied');
+    window.location.href = url.toString();
   };
 
   if (loading) {
@@ -106,7 +123,7 @@ const OAuthConsent: React.FC = () => {
     );
   }
 
-  if (!authDetails) return null;
+  if (!clientInfo) return null;
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] p-6">
@@ -122,7 +139,7 @@ const OAuthConsent: React.FC = () => {
         </div>
 
         <h1 className="text-2xl font-bold text-center text-white mb-2">
-          Authorize <span className="text-indigo-400">{authDetails.client?.name || 'Application'}</span>
+          Authorize <span className="text-indigo-400">{clientInfo.name || 'Application'}</span>
         </h1>
         <p className="text-slate-400 text-center text-sm mb-8">
           This application would like to access your ZippyType account.
@@ -131,27 +148,27 @@ const OAuthConsent: React.FC = () => {
         <div className="space-y-4 mb-8">
           <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
             <p className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-1">Client</p>
-            <p className="text-white font-medium">{authDetails.client?.name || 'Unknown Client'}</p>
+            <p className="text-white font-medium">{clientInfo.name || 'Unknown Client'}</p>
           </div>
           
           <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
             <p className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-1">Redirect URI</p>
-            <p className="text-slate-300 text-sm break-all">{authDetails.redirect_uri}</p>
+            <p className="text-slate-300 text-sm break-all">{redirectUri}</p>
           </div>
 
-          {authDetails.scope && authDetails.scope.trim() && (
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
-              <p className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-3">Requested Permissions</p>
-              <ul className="space-y-2">
-                {authDetails.scope.split(' ').map((scopeItem: string) => (
-                  <li key={scopeItem} className="flex items-start gap-2 text-sm text-slate-300">
-                    <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" />
-                    <span>{scopeItem}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+            <p className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-3">Requested Permissions</p>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2 text-sm text-slate-300">
+                <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+                <span>Read your profile information (username, handle, avatar)</span>
+              </li>
+              <li className="flex items-start gap-2 text-sm text-slate-300">
+                <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+                <span>Verify your Pro status</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">

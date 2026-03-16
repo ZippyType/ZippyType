@@ -408,7 +408,23 @@ const App: React.FC = () => {
   const [hostId, setHostId] = useState<string | null>(null);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get('redirect');
+    
+    if (user && redirect) {
+      window.location.href = redirect;
+    }
+  }, [user, location.search]);
+
+  useEffect(() => {
     const path = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get('redirect');
+    
+    if (redirect && !user) {
+      setShowAuth(true);
+    }
+
     if (path === '/login') {
       if (user) {
         navigate('/');
@@ -453,7 +469,7 @@ const App: React.FC = () => {
       else setActiveSettingsTab('general');
     } else if (path === '/developer') {
       setCurrentView(AppView.DEVELOPER);
-    } else if (path.startsWith('/oauth/consent')) {
+    } else if (path.startsWith('/oauth/authorize') || path.startsWith('/oauth/consent')) {
       setCurrentView(AppView.OAUTH_CONSENT);
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
@@ -2170,7 +2186,7 @@ const App: React.FC = () => {
         ) : currentView === AppView.HELP ? (
           <HelpView />
         ) : currentView === AppView.DEVELOPER ? (
-          <DeveloperDashboard />
+          <DeveloperDashboard user={user} />
         ) : currentView === AppView.OAUTH_CONSENT ? (
           <OAuthConsent />
         ) : currentView === AppView.PROFILE ? (
