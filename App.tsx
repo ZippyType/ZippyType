@@ -48,7 +48,7 @@ import AccountSettings from './components/AccountSettings';
 import ProfileView from './components/ProfileView';
 import HelpView from './components/HelpView';
 import DeveloperDashboard from './components/DeveloperDashboard';
-import OAuthAuthorize from './components/OAuthAuthorize';
+import OAuthConsent from './components/OAuthConsent';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
@@ -453,8 +453,8 @@ const App: React.FC = () => {
       else setActiveSettingsTab('general');
     } else if (path === '/developer') {
       setCurrentView(AppView.DEVELOPER);
-    } else if (path.startsWith('/oauth/authorize')) {
-      setCurrentView(AppView.OAUTH_AUTHORIZE);
+    } else if (path.startsWith('/oauth/consent')) {
+      setCurrentView(AppView.OAUTH_CONSENT);
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
     } else {
@@ -848,7 +848,7 @@ const App: React.FC = () => {
             const used = await checkIpSoloUsage();
             setHasUsedSolo(used);
             setHistory([]);
-            const restrictedGuestPaths = ['/pandc', '/redirect', '/oauth/authorize', '/developer', '/tutorial', '/leaderboard', '/search'];
+            const restrictedGuestPaths = ['/pandc', '/redirect', '/oauth/consent', '/developer', '/tutorial', '/leaderboard', '/search'];
             if (!restrictedGuestPaths.some(p => window.location.pathname.startsWith(p))) {
               setCurrentView(AppView.GAME);
             }
@@ -2170,9 +2170,9 @@ const App: React.FC = () => {
         ) : currentView === AppView.HELP ? (
           <HelpView />
         ) : currentView === AppView.DEVELOPER ? (
-          <DeveloperDashboard user={user} />
-        ) : currentView === AppView.OAUTH_AUTHORIZE ? (
-          <OAuthAuthorize user={user} />
+          <DeveloperDashboard />
+        ) : currentView === AppView.OAUTH_CONSENT ? (
+          <OAuthConsent />
         ) : currentView === AppView.PROFILE ? (
           <ProfileView 
             username={location.pathname.startsWith('/users/@') ? location.pathname.split('@')[1] : (profile.handle || profile.username)}

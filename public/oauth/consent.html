@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorize Application - ZippyType</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+    <div id="app" class="max-w-md w-full glass rounded-3xl p-8 shadow-2xl">
+        <div id="loading" class="flex flex-col items-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
+            <p class="text-slate-400">Loading authorization details...</p>
+        </div>
+
+        <div id="error" class="hidden text-center py-8">
+            <div class="text-rose-500 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold mb-2">OAuth Error</h2>
+            <p id="error-message" class="text-slate-400 mb-6"></p>
+            <a href="/" class="text-indigo-400 hover:text-indigo-300 font-bold">Return to ZippyType</a>
+        </div>
+
+        <div id="login-required" class="hidden text-center py-8">
+            <div class="text-indigo-500 mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold mb-4">Login Required</h1>
+            <p class="text-slate-400 mb-8">You need to be logged in to ZippyType to authorize this application.</p>
+            <button id="btn-login" class="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold transition-all">Go to Login</button>
+        </div>
+
+        <div id="consent" class="hidden">
+            <div class="flex items-center justify-center mb-6">
+                <div class="w-20 h-20 bg-indigo-600/20 rounded-2xl flex items-center justify-center border border-indigo-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+            </div>
+
+            <h1 class="text-2xl font-bold text-center mb-2">Authorize <span id="app-name">Application</span></h1>
+            <p class="text-slate-400 text-center text-sm mb-8">
+                This application would like to access your ZippyType account.
+            </p>
+
+            <div class="space-y-4 mb-8" id="scopes-list">
+                <!-- Scopes will be injected here -->
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="btn-authorize" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                    <span id="btn-text">Approve</span>
+                </button>
+                <button id="btn-deny" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition-all text-center">Deny</button>
+            </div>
+
+            <p class="mt-6 text-[10px] text-slate-500 text-center uppercase tracking-widest font-bold">
+                Secure Login via ZippyType
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Use environment variables or placeholders
+        const supabaseUrl = 'https://ewdrrhdsxjrhxyzgjokg.supabase.co';
+        // We need the anon key. It's safe to expose the anon key in the frontend.
+        // I will fetch it from the environment if possible, but since this is static HTML, I'll have to rely on the user providing it or fetching it from a config endpoint.
+        // Let's create a simple endpoint to get the public config.
+    </script>
+</body>
+</html>

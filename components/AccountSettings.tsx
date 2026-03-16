@@ -193,6 +193,25 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setPro
           {success}
         </div>
       )}
+
+      {/* Developer Section */}
+      <div className="p-8 glass border border-indigo-500/20 rounded-[2rem] space-y-6 mt-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl">
+            <ShieldCheck size={22} />
+          </div>
+          <h3 className="text-xs font-black text-white uppercase tracking-widest">Developer Integration</h3>
+        </div>
+        <p className="text-sm text-slate-400 font-medium">
+          Integrate ZippyType into your own applications using our OAuth 2.1 API. Allow users to sign in with their ZippyType account and access their profile data.
+        </p>
+        <button 
+          onClick={() => window.location.href = '/developer'}
+          className="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/20"
+        >
+          View Developer Documentation
+        </button>
+      </div>
     </div>
   );
 };

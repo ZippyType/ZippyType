@@ -49,7 +49,7 @@ export enum AppView {
   CLANS = 'clans',
   HELP = 'help',
   DEVELOPER = 'developer',
-  OAUTH_AUTHORIZE = 'oauth_authorize',
+  OAUTH_CONSENT = 'oauth_consent',
   NOT_FOUND = 'not_found'
 }
 
