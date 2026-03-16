@@ -9,6 +9,8 @@ const OAuthConsent: React.FC = () => {
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [clientId, setClientId] = useState<string | null>(null);
   const [redirectUri, setRedirectUri] = useState<string | null>(null);
+  const [codeChallenge, setCodeChallenge] = useState<string | null>(null);
+  const [codeChallengeMethod, setCodeChallengeMethod] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,12 +19,21 @@ const OAuthConsent: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const cId = params.get('client_id');
         const rUri = params.get('redirect_uri');
+        const cChallenge = params.get('code_challenge');
+        const cChallengeMethod = params.get('code_challenge_method');
 
         if (!cId || !rUri) {
           throw new Error('Missing client_id or redirect_uri parameters');
         }
+
+        if (!cChallenge) {
+          throw new Error('OAuth 2.1 requires code_challenge parameter');
+        }
+
         setClientId(cId);
         setRedirectUri(rUri);
+        setCodeChallenge(cChallenge);
+        setCodeChallengeMethod(cChallengeMethod || 'plain');
 
         const { data: { user } } = await supabase.auth.getUser();
 
@@ -68,6 +79,8 @@ const OAuthConsent: React.FC = () => {
         body: JSON.stringify({
           client_id: clientId,
           redirect_uri: redirectUri,
+          code_challenge: codeChallenge,
+          code_challenge_method: codeChallengeMethod,
           userId: userId
         })
       });

@@ -14,8 +14,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
   const [newAppName, setNewAppName] = useState('');
   const [newAppRedirectUri, setNewAppRedirectUri] = useState('');
   const [error, setError] = useState('');
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
-  const appUrl = window.location.origin;
+  const appUrl = 'https://zippytype.vercel.app';
 
   useEffect(() => {
     if (user) {
@@ -60,6 +61,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
       if (res.ok) {
         const newApp = await res.json();
         setApps([...apps, newApp]);
+        setSelectedAppId(newApp.id);
         setNewAppName('');
         setNewAppRedirectUri('');
       } else {
@@ -93,7 +95,11 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const htmlSnippet = `<a href="${appUrl}/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI" style="display: inline-flex; align-items: center; gap: 8px; background-color: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-family: sans-serif; font-weight: bold;">
+  const selectedApp = apps.find(a => a.id === selectedAppId) || apps[0];
+  const displayClientId = selectedApp?.client_id || 'YOUR_CLIENT_ID';
+  const displayRedirectUri = selectedApp?.redirect_uris?.[0] || 'YOUR_REDIRECT_URI';
+
+  const htmlSnippet = `<a href="${appUrl}/oauth/authorize?client_id=${displayClientId}&redirect_uri=${encodeURIComponent(displayRedirectUri)}&code_challenge=YOUR_CODE_CHALLENGE&code_challenge_method=S256" style="display: inline-flex; align-items: center; gap: 8px; background-color: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-family: sans-serif; font-weight: bold;">
   <img src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" alt="ZippyType Logo" width="24" height="24" style="border-radius: 4px;" />
   Sign in with ZippyType
 </a>`;
@@ -102,10 +108,11 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
 
 const ZippyTypeLoginButton = () => {
   const handleLogin = () => {
-    const clientId = 'YOUR_CLIENT_ID';
-    const redirectUri = 'YOUR_REDIRECT_URI';
+    const clientId = '${displayClientId}';
+    const redirectUri = '${displayRedirectUri}';
+    const codeChallenge = 'YOUR_CODE_CHALLENGE'; // Generate this using PKCE
     
-    window.location.href = \`${appUrl}/oauth/authorize?client_id=\${clientId}&redirect_uri=\${redirectUri}\`;
+    window.location.href = \`${appUrl}/oauth/authorize?client_id=\${clientId}&redirect_uri=\${redirectUri}&code_challenge=\${codeChallenge}&code_challenge_method=S256\`;
   };
 
   return (
@@ -176,15 +183,25 @@ export default ZippyTypeLoginButton;`;
               {apps.length > 0 ? (
                 <div className="space-y-4">
                   {apps.map(app => (
-                    <div key={app.id} className="bg-slate-900/50 border border-slate-700 rounded-xl p-5 relative group">
-                      <button 
-                        onClick={() => handleDeleteApp(app.id)}
-                        className="absolute top-4 right-4 p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                        title="Delete App"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                      <h3 className="text-lg font-bold text-white mb-4">{app.name}</h3>
+                    <div key={app.id} className={`bg-slate-900/50 border rounded-xl p-5 relative group transition-all ${selectedAppId === app.id ? 'border-indigo-500 ring-1 ring-indigo-500/50' : 'border-slate-700'}`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-bold text-white">{app.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => setSelectedAppId(app.id)}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedAppId === app.id ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                          >
+                            {selectedAppId === app.id ? 'Selected' : 'Select for Snippets'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteApp(app.id)}
+                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                            title="Delete App"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
                       <div className="space-y-3">
                         <div>
                           <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Client ID</p>
@@ -277,22 +294,22 @@ export default ZippyTypeLoginButton;`;
         >
           <div className="flex items-center gap-3 mb-4">
             <BookOpen className="text-indigo-400" size={24} />
-            <h2 className="text-xl font-bold text-white">OAuth 2.0 Flow</h2>
+            <h2 className="text-xl font-bold text-white">OAuth 2.1 Flow (PKCE)</h2>
           </div>
           
           <div className="prose prose-invert max-w-none text-slate-300">
             <p className="mb-4">
-              ZippyType provides a standard OAuth 2.0 authorization code flow. Follow these steps to authenticate users and access their profile data.
+              ZippyType provides a secure OAuth 2.1 authorization code flow with PKCE. Follow these steps to authenticate users and access their profile data.
             </p>
             
             <h3 className="text-lg font-bold text-white mt-6 mb-2">1. Authorization Request</h3>
-            <p className="text-sm mb-2">Redirect the user to ZippyType's authorization endpoint:</p>
+            <p className="text-sm mb-2">Redirect the user to ZippyType's authorization endpoint. You must include a <code className="text-indigo-300">code_challenge</code> and <code className="text-indigo-300">code_challenge_method</code> (S256 recommended).</p>
             <code className="block bg-slate-900 p-3 rounded-xl mt-1 text-sm font-mono text-indigo-300 break-all border border-slate-700">
-              GET {appUrl}/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI
+              GET {appUrl}/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&code_challenge=YOUR_CODE_CHALLENGE&code_challenge_method=S256
             </code>
 
             <h3 className="text-lg font-bold text-white mt-6 mb-2">2. Token Exchange</h3>
-            <p className="text-sm mb-2">After the user approves, they will be redirected back to your <code className="text-indigo-300">redirect_uri</code> with a <code className="text-indigo-300">code</code> parameter. Exchange this code for an access token:</p>
+            <p className="text-sm mb-2">After the user approves, they will be redirected back to your <code className="text-indigo-300">redirect_uri</code> with a <code className="text-indigo-300">code</code> parameter. Exchange this code and your <code className="text-indigo-300">code_verifier</code> for an access token:</p>
             <code className="block bg-slate-900 p-3 rounded-xl mt-1 text-sm font-mono text-indigo-300 break-all border border-slate-700">
               POST {appUrl}/api/oauth/token<br/>
               Content-Type: application/json<br/><br/>
@@ -300,6 +317,7 @@ export default ZippyTypeLoginButton;`;
   "client_id": "YOUR_CLIENT_ID",
   "client_secret": "YOUR_CLIENT_SECRET",
   "code": "CODE_FROM_URL",
+  "code_verifier": "YOUR_CODE_VERIFIER",
   "grant_type": "authorization_code",
   "redirect_uri": "YOUR_REDIRECT_URI"
 }`}
@@ -358,7 +376,7 @@ export default ZippyTypeLoginButton;`;
                 </pre>
               </div>
               <div className="mt-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: htmlSnippet.replace('YOUR_CLIENT_ID', '').replace('YOUR_REDIRECT_URI', '') }} />
+                <div dangerouslySetInnerHTML={{ __html: htmlSnippet.replace('YOUR_CODE_CHALLENGE', 'demo_challenge') }} />
               </div>
             </div>
 

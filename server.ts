@@ -6,6 +6,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from 'stripe';
+import crypto from 'crypto';
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -548,7 +549,7 @@ async function startServer() {
   });
 
   app.post('/api/oauth/authorize', async (req, res) => {
-    const { client_id, redirect_uri, userId } = req.body;
+    const { client_id, redirect_uri, userId, code_challenge, code_challenge_method } = req.body;
     
     try {
       // Validate client and redirect URI
@@ -573,7 +574,9 @@ async function startServer() {
           code,
           client_id,
           user_id: userId,
-          expires_at: expiresAt
+          expires_at: expiresAt,
+          code_challenge,
+          code_challenge_method: code_challenge_method || 'plain'
         });
       
       if (codeError) throw codeError;
@@ -585,7 +588,7 @@ async function startServer() {
   });
 
   app.post('/api/oauth/token', async (req, res) => {
-    const { client_id, client_secret, code, grant_type, redirect_uri } = req.body;
+    const { client_id, client_secret, code, grant_type, redirect_uri, code_verifier } = req.body;
 
     if (grant_type !== 'authorization_code') {
       return res.status(400).json({ error: 'Unsupported grant type' });
@@ -616,7 +619,31 @@ async function startServer() {
         return res.status(400).json({ error: 'Code expired' });
       }
 
-      // 3. Mark code as used
+      // 3. PKCE Verification
+      if (oauthCode.code_challenge) {
+        if (!code_verifier) {
+          return res.status(400).json({ error: 'code_verifier is required for PKCE' });
+        }
+
+        let verified = false;
+        if (oauthCode.code_challenge_method === 'S256') {
+          const hash = crypto.createHash('sha256').update(code_verifier).digest();
+          const challenge = hash.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+          verified = challenge === oauthCode.code_challenge;
+        } else {
+          verified = code_verifier === oauthCode.code_challenge;
+        }
+
+        if (!verified) {
+          return res.status(400).json({ error: 'Invalid code_verifier' });
+        }
+      } else {
+        // OAuth 2.1 mandates PKCE, but we might have legacy codes or allow non-PKCE for now?
+        // Actually, the user said "It's OAuth 2.1, not 2.0", so we should probably mandate it.
+        return res.status(400).json({ error: 'PKCE is required for OAuth 2.1' });
+      }
+
+      // 4. Mark code as used
       await supabaseAdmin.from('oauth_codes').update({ used: true }).eq('code', code);
 
       // 4. Generate tokens
