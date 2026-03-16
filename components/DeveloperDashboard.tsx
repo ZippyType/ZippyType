@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseService';
 import { OAuthApp } from '../types';
-import { Plus, Trash2, Copy, Check, ExternalLink, Code, Shield, Globe } from 'lucide-react';
+import { Plus, Trash2, Copy, Check, ExternalLink, Code, Shield, Globe, BookOpen } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface DeveloperDashboardProps {
@@ -19,6 +19,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
   const [editName, setEditName] = useState('');
   const [editRedirectUris, setEditRedirectUris] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showDocs, setShowDocs] = useState(false);
 
   useEffect(() => {
     fetchApps();
@@ -117,7 +118,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
     return `<!-- HTML -->
 <a href="${baseUrl}/oauth/authorize?client_id=${clientId}" 
    style="background: #6366f1; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-family: sans-serif; display: inline-flex; align-items: center; gap: 8px; font-weight: bold;">
-   <img src="${baseUrl}/api/icon.png" style="width: 20px; height: 20px;" alt="ZippyType Logo" />
+   <img src="${baseUrl}/oauth/logo/logo.png" style="width: 20px; height: 20px;" alt="ZippyType Logo" />
    Sign in with ZippyType
 </a>`;
   };
@@ -137,7 +138,7 @@ const ZippyTypeLogin = () => {
         display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 'bold'
       }}
     >
-      <img src="${baseUrl}/api/icon.png" style={{ width: 20, height: 20 }} alt="ZippyType Logo" />
+      <img src="${baseUrl}/oauth/logo/logo.png" style={{ width: 20, height: 20 }} alt="ZippyType Logo" />
       Sign in with ZippyType
     </a>
   );
@@ -167,16 +168,99 @@ const ZippyTypeLogin = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Developer Dashboard</h1>
           <p className="text-slate-400 text-sm">Create and manage OAuth applications to use ZippyType as an identity provider.</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={20} />
-          Create App
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowDocs(!showDocs)}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <BookOpen size={20} />
+            {showDocs ? 'My Apps' : 'Documentation'}
+          </button>
+          {!showDocs && (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus size={20} />
+              Create App
+            </button>
+          )}
+        </div>
       </div>
 
-      {showCreate && (
+      {showDocs ? (
+        <div className="space-y-8">
+          <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">How ZippyType OAuth Works</h2>
+            <p className="text-slate-300 mb-4 text-sm leading-relaxed">
+              ZippyType implements a standard OAuth 2.0 Authorization Code flow. This is the modern, secure standard for authorization, allowing third-party applications (like your own app, or AI agents using the Model Context Protocol) to safely access a user's ZippyType profile data without ever seeing their password.
+            </p>
+            
+            <div className="space-y-8 mt-8">
+              <div>
+                <h3 className="text-lg font-bold text-indigo-400 mb-2">1. The Authorization Request</h3>
+                <p className="text-slate-300 mb-2 text-sm">
+                  Redirect the user to ZippyType's authorization endpoint. You can use the HTML or React snippets provided in your app's dashboard.
+                </p>
+                <pre className="text-[11px] text-slate-400 p-4 bg-black/40 rounded-xl border border-slate-800 font-mono overflow-x-auto">
+                  GET https://zippytype.vercel.app/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code
+                </pre>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-indigo-400 mb-2">2. Handling the Callback</h3>
+                <p className="text-slate-300 mb-2 text-sm">
+                  After the user approves your app on the Consent Screen, they will be redirected back to your <code>redirect_uri</code> with a <code>code</code> parameter in the URL.
+                </p>
+                <pre className="text-[11px] text-slate-400 p-4 bg-black/40 rounded-xl border border-slate-800 font-mono overflow-x-auto">
+                  https://your-app.com/callback?code=abc123xyz...
+                </pre>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-indigo-400 mb-2">3. Exchanging the Code for a Token</h3>
+                <p className="text-slate-300 mb-2 text-sm">
+                  Make a server-side POST request to exchange the authorization code for an access token. <strong>Do not do this on the frontend</strong> to keep your client secret safe.
+                </p>
+                <pre className="text-[11px] text-slate-400 p-4 bg-black/40 rounded-xl border border-slate-800 font-mono overflow-x-auto">
+{`POST https://zippytype.vercel.app/api/oauth/token
+Content-Type: application/json
+
+{
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "code": "THE_CODE_FROM_URL",
+  "grant_type": "authorization_code"
+}`}
+                </pre>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-indigo-400 mb-2">4. Fetching User Data</h3>
+                <p className="text-slate-300 mb-2 text-sm">
+                  Use the access token to fetch the user's ZippyType profile information via a standard REST API request.
+                </p>
+                <pre className="text-[11px] text-slate-400 p-4 bg-black/40 rounded-xl border border-slate-800 font-mono overflow-x-auto">
+{`GET https://zippytype.vercel.app/api/oauth/userinfo
+Authorization: Bearer YOUR_ACCESS_TOKEN`}
+                </pre>
+                <p className="text-slate-300 mt-4 mb-2 text-sm font-bold">Example Response:</p>
+                <pre className="text-[11px] text-slate-400 p-4 bg-black/40 rounded-xl border border-slate-800 font-mono overflow-x-auto">
+{`{
+  "id": "user-uuid...",
+  "username": "TypeMaster99",
+  "handle": "typemaster99",
+  "avatar_url": "https://...",
+  "is_pro": true
+}`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {showCreate && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -393,6 +477,8 @@ const ZippyTypeLogin = () => {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

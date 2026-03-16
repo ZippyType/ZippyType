@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/oauth/logo/logo.png", "destination": "https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" },
     { "source": "/legacy", "destination": "/legacy.html" },
     { "source": "/legacy.html", "destination": "/legacy.html" },
     { "source": "/oauth/authorize", "destination": "/oauth/authorize.html" },
