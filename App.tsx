@@ -483,9 +483,11 @@ const App: React.FC = () => {
       setCurrentView(AppView.OAUTH_CONSENT);
     } else if (path === '/pandc' || path === '/privacy') {
       setCurrentView(AppView.PRIVACY);
-    } else if (path === '/redirect') {
+    } else if (path.startsWith('/redirect')) {
+      console.log('Routing to REDIRECT view');
       setCurrentView(AppView.REDIRECT);
     } else {
+      console.log('Routing to NOT_FOUND view for path:', path);
       setCurrentView(AppView.NOT_FOUND);
     }
   }, [location, user]);
