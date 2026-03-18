@@ -2891,6 +2891,12 @@ const App: React.FC = () => {
         >
            <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2]"></span> Discord
         </a>
+        <a 
+          href="mailto:zippytype@googlegroups.com"
+          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 uppercase tracking-widest transition-colors"
+        >
+          Support and Business Inquiries
+        </a>
         <button 
           onClick={() => {
             if (navigator.share) {
