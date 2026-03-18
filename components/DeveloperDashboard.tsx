@@ -183,18 +183,24 @@ export default ZippyTypeLoginButton;`;
               {apps.length > 0 ? (
                 <div className="space-y-4">
                   {apps.map(app => (
-                    <div key={app.id} className={`bg-slate-900/50 border rounded-xl p-5 relative group transition-all ${selectedAppId === app.id ? 'border-indigo-500 ring-1 ring-indigo-500/50' : 'border-slate-700'}`}>
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-white">{app.name}</h3>
+                    <div 
+                      key={app.id} 
+                      onClick={() => setSelectedAppId(app.id)}
+                      className={`bg-slate-800/40 border rounded-2xl p-6 relative group transition-all cursor-pointer ${selectedAppId === app.id ? 'border-indigo-500 ring-1 ring-indigo-500/50 bg-slate-800/60' : 'border-slate-700 hover:border-slate-600 hover:bg-slate-800/50'}`}
+                    >
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${selectedAppId === app.id ? 'bg-indigo-600/20 border-indigo-500/30 text-indigo-400' : 'bg-slate-700/50 border-slate-600 text-slate-400'}`}>
+                            <Shield size={20} />
+                          </div>
+                          <h3 className="text-xl font-bold text-white">{app.name}</h3>
+                        </div>
                         <div className="flex items-center gap-2">
                           <button 
-                            onClick={() => setSelectedAppId(app.id)}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedAppId === app.id ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-                          >
-                            {selectedAppId === app.id ? 'Selected' : 'Select for Snippets'}
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteApp(app.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteApp(app.id);
+                            }}
                             className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                             title="Delete App"
                           >
@@ -202,38 +208,128 @@ export default ZippyTypeLoginButton;`;
                           </button>
                         </div>
                       </div>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Client ID</p>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-black/40 px-3 py-2 rounded-lg text-indigo-300 text-sm font-mono break-all border border-white/5">
-                              {app.client_id}
-                            </code>
-                            <button onClick={() => handleCopy(app.client_id, `client_id_${app.id}`)} className="p-2 text-slate-400 hover:text-white bg-black/40 rounded-lg border border-white/5">
-                              {copiedText === `client_id_${app.id}` ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                            </button>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Client ID</p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 bg-black/40 px-3 py-2.5 rounded-xl text-indigo-300 text-sm font-mono break-all border border-white/5">
+                                {app.client_id}
+                              </code>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopy(app.client_id, `client_id_${app.id}`);
+                                }} 
+                                className="p-2.5 text-slate-400 hover:text-white bg-black/40 rounded-xl border border-white/5 transition-colors"
+                              >
+                                {copiedText === `client_id_${app.id}` ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Client Secret</p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 bg-black/40 px-3 py-2.5 rounded-xl text-rose-300 text-sm font-mono break-all border border-white/5">
+                                {app.client_secret}
+                              </code>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopy(app.client_secret, `client_secret_${app.id}`);
+                                }} 
+                                className="p-2.5 text-slate-400 hover:text-white bg-black/40 rounded-xl border border-white/5 transition-colors"
+                              >
+                                {copiedText === `client_secret_${app.id}` ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Client Secret</p>
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 bg-black/40 px-3 py-2 rounded-lg text-rose-300 text-sm font-mono break-all border border-white/5">
-                              {app.client_secret}
-                            </code>
-                            <button onClick={() => handleCopy(app.client_secret, `client_secret_${app.id}`)} className="p-2 text-slate-400 hover:text-white bg-black/40 rounded-lg border border-white/5">
-                              {copiedText === `client_secret_${app.id}` ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Redirect URIs</p>
-                          <div className="bg-black/40 px-3 py-2 rounded-lg border border-white/5">
+                          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">Redirect URIs</p>
+                          <div className="bg-black/40 px-4 py-3 rounded-xl border border-white/5 h-[104px] overflow-y-auto">
                             {app.redirect_uris.map((uri: string, i: number) => (
-                              <div key={i} className="text-slate-300 text-sm font-mono break-all">{uri}</div>
+                              <div key={i} className="text-slate-300 text-sm font-mono break-all mb-1 last:mb-0">{uri}</div>
                             ))}
                           </div>
                         </div>
                       </div>
+
+                      {selectedAppId === app.id && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="pt-8 mt-6 border-t border-slate-700/50 space-y-10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Code className="text-indigo-400" size={20} />
+                              <h4 className="text-base font-bold text-white uppercase tracking-wider">Integration Snippets</h4>
+                            </div>
+                            <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
+                              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">OAuth 2.1 PKCE</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-10">
+                            {/* HTML Snippet */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                  <h5 className="text-sm font-bold text-white">HTML Button</h5>
+                                  <p className="text-xs text-slate-500">Simple anchor tag with ZippyType styling.</p>
+                                </div>
+                                <button 
+                                  onClick={() => handleCopy(htmlSnippet, `html_${app.id}`)}
+                                  className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all text-xs font-bold border border-slate-600"
+                                >
+                                  {copiedText === `html_${app.id}` ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                  {copiedText === `html_${app.id}` ? 'COPIED' : 'COPY HTML'}
+                                </button>
+                              </div>
+                              <div className="relative group/code">
+                                <div className="absolute -top-2 -right-2 px-2 py-1 bg-indigo-600 text-[10px] font-bold text-white rounded-md opacity-0 group-hover/code:opacity-100 transition-opacity">HTML</div>
+                                <div className="bg-black/60 rounded-2xl p-5 overflow-x-auto border border-white/5 shadow-inner">
+                                  <pre className="text-xs text-indigo-300 font-mono leading-relaxed">
+                                    {htmlSnippet}
+                                  </pre>
+                                </div>
+                              </div>
+                              <div className="p-6 bg-slate-900/40 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-4">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Live Preview</p>
+                                <div dangerouslySetInnerHTML={{ __html: htmlSnippet.replace('YOUR_CODE_CHALLENGE', 'demo_challenge') }} />
+                              </div>
+                            </div>
+
+                            {/* React Snippet */}
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                  <h5 className="text-sm font-bold text-white">React Component</h5>
+                                  <p className="text-xs text-slate-500">Reusable functional component with PKCE logic.</p>
+                                </div>
+                                <button 
+                                  onClick={() => handleCopy(reactSnippet, `react_${app.id}`)}
+                                  className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all text-xs font-bold border border-slate-600"
+                                >
+                                  {copiedText === `react_${app.id}` ? <CheckCircle2 size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                  {copiedText === `react_${app.id}` ? 'COPIED' : 'COPY REACT'}
+                                </button>
+                              </div>
+                              <div className="relative group/code">
+                                <div className="absolute -top-2 -right-2 px-2 py-1 bg-indigo-600 text-[10px] font-bold text-white rounded-md opacity-0 group-hover/code:opacity-100 transition-opacity">TSX</div>
+                                <div className="bg-black/60 rounded-2xl p-5 overflow-x-auto border border-white/5 shadow-inner">
+                                  <pre className="text-xs text-indigo-300 font-mono leading-relaxed">
+                                    {reactSnippet}
+                                  </pre>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -339,64 +435,6 @@ export default ZippyTypeLoginButton;`;
   "is_pro": true
 }`}
             </code>
-          </div>
-        </motion.section>
-
-        {/* Login Buttons Section */}
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <Code className="text-indigo-400" size={24} />
-            <h2 className="text-xl font-bold text-white">Login Buttons</h2>
-          </div>
-          
-          <p className="text-slate-400 mb-6">
-            Use these pre-styled buttons to add "Sign in with ZippyType" to your application.
-          </p>
-
-          <div className="space-y-8">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-white font-bold">HTML Snippet</h3>
-                <button 
-                  onClick={() => handleCopy(htmlSnippet, 'html')}
-                  className="text-slate-400 hover:text-white flex items-center gap-1 text-sm transition-colors"
-                >
-                  {copiedText === 'html' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                  {copiedText === 'html' ? 'Copied!' : 'Copy Code'}
-                </button>
-              </div>
-              <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto border border-slate-700">
-                <pre className="text-sm text-slate-300 font-mono">
-                  {htmlSnippet}
-                </pre>
-              </div>
-              <div className="mt-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 flex justify-center">
-                <div dangerouslySetInnerHTML={{ __html: htmlSnippet.replace('YOUR_CODE_CHALLENGE', 'demo_challenge') }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-white font-bold">React Component</h3>
-                <button 
-                  onClick={() => handleCopy(reactSnippet, 'react')}
-                  className="text-slate-400 hover:text-white flex items-center gap-1 text-sm transition-colors"
-                >
-                  {copiedText === 'react' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                  {copiedText === 'react' ? 'Copied!' : 'Copy Code'}
-                </button>
-              </div>
-              <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto border border-slate-700">
-                <pre className="text-sm text-slate-300 font-mono">
-                  {reactSnippet}
-                </pre>
-              </div>
-            </div>
           </div>
         </motion.section>
       </div>

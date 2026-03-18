@@ -46,11 +46,21 @@ const OAuthConsent: React.FC = () => {
 
         // Fetch client info from our custom API
         const response = await fetch(`/api/oauth/client-info?client_id=${cId}`);
+        const contentType = response.headers.get('content-type');
+        
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Invalid client_id');
+          if (contentType && contentType.includes('application/json')) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Invalid client_id');
+          } else {
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
         }
         
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server returned non-JSON response. Please check your backend configuration.');
+        }
+
         const data = await response.json();
         
         // Validate redirect URI
