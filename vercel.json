@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/oauth/logo.png",
-      "destination": "https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logo.png"
+      "destination": "https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png"
     }
   ]
 }
