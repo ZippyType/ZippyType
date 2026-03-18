@@ -48,6 +48,7 @@ import AccountSettings from './components/AccountSettings';
 import ProfileView from './components/ProfileView';
 import HelpView from './components/HelpView';
 import DeveloperDashboard from './components/DeveloperDashboard';
+import NotFound from './components/NotFound';
 import OAuthConsent from './components/OAuthConsent';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
@@ -425,6 +426,11 @@ const App: React.FC = () => {
       setShowAuth(true);
     }
 
+    if (path === '/legacy' || path === '/legacy.html') {
+      window.location.href = '/legacy.html';
+      return;
+    }
+
     if (path === '/login') {
       if (user) {
         navigate('/');
@@ -437,6 +443,8 @@ const App: React.FC = () => {
       } else {
         setShowAuth(true);
       }
+    } else if (path === '/') {
+      setCurrentView(AppView.GAME);
     } else if (path.startsWith('/play/')) {
       setCurrentView(AppView.GAME);
       const mode = path.split('/')[2];
@@ -456,6 +464,8 @@ const App: React.FC = () => {
       setCurrentView(AppView.LEADERBOARD);
     } else if (path === '/clans') {
       setCurrentView(AppView.CLANS);
+    } else if (path === '/help') {
+      setCurrentView(AppView.HELP);
     } else if (path === '/search') {
       setCurrentView(AppView.SEARCH);
     } else if (path.startsWith('/settings')) {
@@ -471,10 +481,12 @@ const App: React.FC = () => {
       setCurrentView(AppView.DEVELOPER);
     } else if (path.startsWith('/oauth/authorize') || path.startsWith('/oauth/consent')) {
       setCurrentView(AppView.OAUTH_CONSENT);
-    } else if (path === '/pandc') {
+    } else if (path === '/pandc' || path === '/privacy') {
       setCurrentView(AppView.PRIVACY);
+    } else if (path === '/redirect') {
+      setCurrentView(AppView.REDIRECT);
     } else {
-      setCurrentView(AppView.GAME);
+      setCurrentView(AppView.NOT_FOUND);
     }
   }, [location, user]);
   const [joinRoomId, setJoinRoomId] = useState("");
@@ -685,22 +697,6 @@ const App: React.FC = () => {
     }
     localStorage.setItem('sfx_volume', sfxVolume.toString());
   }, [sfxVolume]);
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/legacy' || path === '/legacy.html') {
-      // Force a full page reload to the legacy file
-      window.location.href = '/legacy.html';
-      return;
-    }
-    if (path === '/pandc') {
-      setCurrentView(AppView.PRIVACY);
-    } else if (path === '/redirect') {
-      setCurrentView(AppView.REDIRECT);
-    } else if (path !== '/') {
-      setCurrentView(AppView.NOT_FOUND);
-    }
-  }, []);
-
   useEffect(() => {
     localStorage.setItem('zippy_problem_keys', JSON.stringify(problemKeys));
   }, [problemKeys]);
@@ -2564,13 +2560,14 @@ const App: React.FC = () => {
           <Tutorials />
         ) : currentView === AppView.PRIVACY ? (
           <PrivacyPolicy onBack={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentView(AppView.GAME);
+            navigate('/');
           }} />
         ) : currentView === AppView.REDIRECT ? (
           <div className="w-full h-screen flex items-center justify-center">
             <OAuthCallback />
           </div>
+        ) : currentView === AppView.NOT_FOUND ? (
+          <NotFound />
         ) : currentMatch ? (
           <MultiplayerRace 
             roomId={currentMatch.roomId}
