@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" alt="ZippyType Logo" width="120" height="120" style="border-radius: 20px;" />
+  <img src="https://zippytype.vercel.app/oauth/logo.png" alt="ZippyType Logo" width="120" height="120" style="border-radius: 20px;" />
   <h1>ZippyType ⚡</h1>
   <p><strong>A high-performance typing competition app featuring AI-generated challenges, real-time analytics, and visual progress tracking.</strong></p>
   <p>
