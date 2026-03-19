@@ -473,8 +473,10 @@ const App: React.FC = () => {
       setCurrentView(AppView.OAUTH_CONSENT);
     } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
-    } else {
+    } else if (path === '/') {
       setCurrentView(AppView.GAME);
+    } else {
+      setCurrentView(AppView.NOT_FOUND);
     }
   }, [location, user]);
   const [joinRoomId, setJoinRoomId] = useState("");
