@@ -1,8 +1,9 @@
 {
   "rewrites": [
-    {
-      "source": "/oauth/logo.png",
-      "destination": "https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png"
-    }
+    { "source": "/oauth/logo/logo.png", "destination": "https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" },
+    { "source": "/legacy", "destination": "/legacy.html" },
+    { "source": "/legacy.html", "destination": "/legacy.html" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

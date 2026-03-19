@@ -51,16 +51,7 @@ async function withRetry<T>(fn: () => T | Promise<T>, retries = 5, delay = 1000)
   throw lastError;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    // Disable the locking mechanism that causes 'Lock broken' errors in some environments
-    storageKey: 'zippytype-auth-token',
-  }
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // --- Encryption Helpers ---
 const ENCRYPTION_PREFIX = 'ENC:';

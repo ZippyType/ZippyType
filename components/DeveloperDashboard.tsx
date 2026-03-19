@@ -16,7 +16,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
   const [error, setError] = useState('');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
-  const appUrl = window.location.origin;
+  const appUrl = 'https://zippytype.vercel.app';
 
   useEffect(() => {
     if (user) {
@@ -345,7 +345,7 @@ export default ZippyTypeLoginButton;`;
                   Create New Application
                 </h3>
                 <form onSubmit={handleCreateApp} className="space-y-4">
-                  {error && <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-sm">{error}</div>}
+                  {error && <div className="text-rose-400 text-sm bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">{error}</div>}
                   <div>
                     <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">App Name</label>
                     <input 

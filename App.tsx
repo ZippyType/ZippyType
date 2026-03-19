@@ -48,7 +48,6 @@ import AccountSettings from './components/AccountSettings';
 import ProfileView from './components/ProfileView';
 import HelpView from './components/HelpView';
 import DeveloperDashboard from './components/DeveloperDashboard';
-import NotFound from './components/NotFound';
 import OAuthConsent from './components/OAuthConsent';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
@@ -426,11 +425,6 @@ const App: React.FC = () => {
       setShowAuth(true);
     }
 
-    if (path === '/legacy' || path === '/legacy.html') {
-      window.location.href = '/legacy.html';
-      return;
-    }
-
     if (path === '/login') {
       if (user) {
         navigate('/');
@@ -443,8 +437,6 @@ const App: React.FC = () => {
       } else {
         setShowAuth(true);
       }
-    } else if (path === '/') {
-      setCurrentView(AppView.GAME);
     } else if (path.startsWith('/play/')) {
       setCurrentView(AppView.GAME);
       const mode = path.split('/')[2];
@@ -464,8 +456,6 @@ const App: React.FC = () => {
       setCurrentView(AppView.LEADERBOARD);
     } else if (path === '/clans') {
       setCurrentView(AppView.CLANS);
-    } else if (path === '/help') {
-      setCurrentView(AppView.HELP);
     } else if (path === '/search') {
       setCurrentView(AppView.SEARCH);
     } else if (path.startsWith('/settings')) {
@@ -481,14 +471,10 @@ const App: React.FC = () => {
       setCurrentView(AppView.DEVELOPER);
     } else if (path.startsWith('/oauth/authorize') || path.startsWith('/oauth/consent')) {
       setCurrentView(AppView.OAUTH_CONSENT);
-    } else if (path === '/pandc' || path === '/privacy') {
+    } else if (path === '/pandc') {
       setCurrentView(AppView.PRIVACY);
-    } else if (path.startsWith('/redirect')) {
-      console.log('Routing to REDIRECT view');
-      setCurrentView(AppView.REDIRECT);
     } else {
-      console.log('Routing to NOT_FOUND view for path:', path);
-      setCurrentView(AppView.NOT_FOUND);
+      setCurrentView(AppView.GAME);
     }
   }, [location, user]);
   const [joinRoomId, setJoinRoomId] = useState("");
@@ -699,6 +685,22 @@ const App: React.FC = () => {
     }
     localStorage.setItem('sfx_volume', sfxVolume.toString());
   }, [sfxVolume]);
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/legacy' || path === '/legacy.html') {
+      // Force a full page reload to the legacy file
+      window.location.href = '/legacy.html';
+      return;
+    }
+    if (path === '/pandc') {
+      setCurrentView(AppView.PRIVACY);
+    } else if (path === '/redirect') {
+      setCurrentView(AppView.REDIRECT);
+    } else if (path !== '/') {
+      setCurrentView(AppView.NOT_FOUND);
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('zippy_problem_keys', JSON.stringify(problemKeys));
   }, [problemKeys]);
@@ -2562,14 +2564,13 @@ const App: React.FC = () => {
           <Tutorials />
         ) : currentView === AppView.PRIVACY ? (
           <PrivacyPolicy onBack={() => {
-            navigate('/');
+            window.history.pushState({}, '', '/');
+            setCurrentView(AppView.GAME);
           }} />
         ) : currentView === AppView.REDIRECT ? (
           <div className="w-full h-screen flex items-center justify-center">
             <OAuthCallback />
           </div>
-        ) : currentView === AppView.NOT_FOUND ? (
-          <NotFound />
         ) : currentMatch ? (
           <MultiplayerRace 
             roomId={currentMatch.roomId}
@@ -2892,12 +2893,6 @@ const App: React.FC = () => {
           className="text-[10px] font-bold text-[#5865F2] hover:text-[#4752C4] uppercase tracking-widest transition-colors flex items-center gap-2"
         >
            <span className="w-1.5 h-1.5 rounded-full bg-[#5865F2]"></span> Discord
-        </a>
-        <a 
-          href="mailto:zippytype@googlegroups.com"
-          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 uppercase tracking-widest transition-colors"
-        >
-          Support and Business Inquiries
         </a>
         <button 
           onClick={() => {
