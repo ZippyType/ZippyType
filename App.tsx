@@ -2189,6 +2189,29 @@ const App: React.FC = () => {
           <DeveloperDashboard user={user} />
         ) : currentView === AppView.OAUTH_CONSENT ? (
           <OAuthConsent />
+        ) : currentView === AppView.NOT_FOUND ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-rose-500/20 rounded-full blur-2xl animate-pulse"></div>
+              <div className="relative p-8 bg-rose-500/10 border border-rose-500/20 rounded-full text-rose-500">
+                <Search size={64} />
+              </div>
+            </div>
+            <div className="text-center space-y-4">
+              <h2 className="text-6xl font-black text-white tracking-tighter uppercase italic">404</h2>
+              <p className="text-xl font-bold text-slate-400 uppercase tracking-widest">Page Not Found</p>
+              <p className="text-sm text-slate-500 max-w-xs mx-auto font-medium leading-relaxed">
+                The race track you're looking for doesn't exist or has been moved to another sector.
+              </p>
+            </div>
+            <button 
+              onClick={() => navigate('/')}
+              className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl text-[11px] uppercase tracking-[0.3em] transition-all shadow-2xl shadow-indigo-500/20 active:scale-95 flex items-center gap-3"
+            >
+              <Gamepad2 size={18} />
+              Back to Base
+            </button>
+          </div>
         ) : currentView === AppView.PROFILE ? (
           <ProfileView 
             username={location.pathname.startsWith('/users/@') ? location.pathname.split('@')[1] : (profile.handle || profile.username)}
@@ -2918,6 +2941,12 @@ const App: React.FC = () => {
           className="text-[10px] font-bold text-white hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-2"
         >
            <span className="w-1.5 h-1.5 rounded-full bg-white"></span> Follow us on X
+        </a>
+        <a 
+          href="mailto:zippytype@googlegroups.com"
+          className="text-[10px] font-bold text-slate-600 hover:text-slate-400 uppercase tracking-widest transition-colors flex items-center gap-2"
+        >
+           <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span> Support and Business Inquiries
         </a>
         <a 
           href="/legacy.html"

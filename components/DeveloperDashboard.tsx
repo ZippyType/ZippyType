@@ -16,7 +16,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ user }) => {
   const [error, setError] = useState('');
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
-  const appUrl = 'https://zippytype.vercel.app';
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://zippytype.vercel.app';
 
   useEffect(() => {
     if (user) {
