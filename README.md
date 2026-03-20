@@ -73,4 +73,4 @@ ZippyType acts as an OAuth 2.1 provider! You can integrate "Sign in with ZippyTy
 
 ## 📄 License
 
-This project is licensed under the APGL License.
+This project is licensed under the APGL-3.0 License.
