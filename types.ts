@@ -50,6 +50,7 @@ export enum AppView {
   HELP = 'help',
   DEVELOPER = 'developer',
   OAUTH_CONSENT = 'oauth_consent',
+  TYPING_TUTOR = 'typing_tutor',
   NOT_FOUND = 'not_found'
 }
 

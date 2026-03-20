@@ -114,3 +114,47 @@ export const fetchCoachNote = async (wpm: number, accuracy: number, errors: numb
     return "Solid effort. Consistency is the key to unlocking true speed.";
   }
 };
+
+export const fetchTypingLesson = async (
+  level: number,
+  isPro: boolean = false,
+  focusArea?: string
+): Promise<{ title: string; content: string; exercise: string; tips: string[] }> => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+  const ai = new GoogleGenAI({ apiKey });
+
+  const model = isPro ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+
+  const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
+  ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
+  
+  Provide the lesson in JSON format with the following structure:
+  {
+    "title": "Lesson Title",
+    "content": "A brief explanation of the technique (max 50 words).",
+    "exercise": "A practice sentence or drill (10-15 words) that reinforces the lesson.",
+    "tips": ["Tip 1", "Tip 2", "Tip 3"]
+  }
+  
+  Ensure the exercise is relevant to the technique. For example, if the lesson is about home row, the exercise should use home row keys.
+  Return ONLY the JSON.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+    
+    return JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.error("Gemini Lesson Error:", error);
+    return {
+      title: "Home Row Mastery",
+      content: "The home row is the base for all touch typing. Keep your fingers anchored on ASDF and JKL;.",
+      exercise: "all sad lads fall as dad asks for a flask",
+      tips: ["Keep your wrists level", "Don't look at the keys", "Return to home row after every stroke"]
+    };
+  }
+};

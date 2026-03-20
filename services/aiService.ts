@@ -48,3 +48,20 @@ export const generateCoachNote = async (
     return await fetchCoachNote(wpm, accuracy, errors, missedChars);
   }
 };
+
+export const generateTypingLesson = async (
+  provider: AIProvider,
+  token: string | undefined,
+  isPro: boolean,
+  level: number,
+  focusArea?: string
+): Promise<{ title: string; content: string; exercise: string; tips: string[] }> => {
+  if (provider === AIProvider.GITHUB) {
+    if (!token) throw new Error("GitHub token is required for GitHub AI provider.");
+    const { fetchGithubTypingLesson } = await import("./githubService");
+    return await fetchGithubTypingLesson(level, token, isPro, focusArea);
+  } else {
+    const { fetchTypingLesson } = await import("./geminiService");
+    return await fetchTypingLesson(level, isPro, focusArea);
+  }
+};

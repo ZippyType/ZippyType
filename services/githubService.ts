@@ -100,3 +100,55 @@ export const fetchGithubCoachNote = async (
     return "Keep pushing. Your potential is limitless.";
   }
 };
+
+export const fetchGithubTypingLesson = async (
+  level: number,
+  token: string,
+  isPro: boolean = false,
+  focusArea?: string
+): Promise<{ title: string; content: string; exercise: string; tips: string[] }> => {
+  const model = isPro ? "gpt-4o" : "gpt-4o-mini";
+  const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
+  ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
+  
+  Provide the lesson in JSON format with the following structure:
+  {
+    "title": "Lesson Title",
+    "content": "A brief explanation of the technique (max 50 words).",
+    "exercise": "A practice sentence or drill (10-15 words) that reinforces the lesson.",
+    "tips": ["Tip 1", "Tip 2", "Tip 3"]
+  }
+  
+  Ensure the exercise is relevant to the technique. For example, if the lesson is about home row, the exercise should use home row keys.
+  Return ONLY the JSON.`;
+
+  try {
+    const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are an elite typing instructor." },
+          { role: "user", content: prompt }
+        ],
+        model: model,
+        temperature: 0.8,
+        max_tokens: 300,
+        response_format: { type: "json_object" }
+      })
+    });
+    const data = await response.json();
+    return JSON.parse(data.choices[0].message.content.trim());
+  } catch (error) {
+    console.error("GitHub Lesson Error:", error);
+    return {
+      title: "Home Row Mastery",
+      content: "The home row is the base for all touch typing. Keep your fingers anchored on ASDF and JKL;.",
+      exercise: "all sad lads fall as dad asks for a flask",
+      tips: ["Keep your wrists level", "Don't look at the keys", "Return to home row after every stroke"]
+    };
+  }
+};

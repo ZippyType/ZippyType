@@ -7,7 +7,7 @@ import {
   Gamepad2, LogOut, X, Volume2, VolumeX, Github, Globe, User, EyeOff, Eye, 
   Activity, Dna, Clock, Lock, ShieldAlert, AlertCircle, Timer, Download, Upload, FileJson,
   BookOpen, Book, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search, FileText,
-  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal, Share2
+  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal, Share2, GraduationCap
 } from 'lucide-react';
 import { useTranslation } from './src/LanguageContext';
 import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement, Quest, ReplayEvent } from './types';
@@ -49,6 +49,7 @@ import ProfileView from './components/ProfileView';
 import HelpView from './components/HelpView';
 import DeveloperDashboard from './components/DeveloperDashboard';
 import OAuthConsent from './components/OAuthConsent';
+import TypingTutor from './components/TypingTutor';
 import { BuyMeACoffeeWidget } from './components/BuyMeACoffeeWidget';
 import confetti from 'canvas-confetti';
 
@@ -446,6 +447,8 @@ const App: React.FC = () => {
       else if (mode === 'code') setGameMode(GameMode.CODE);
     } else if (path === '/tutorial') {
       setCurrentView(AppView.TUTORIALS);
+    } else if (path === '/tutor') {
+      setCurrentView(AppView.TYPING_TUTOR);
     } else if (path.startsWith('/users/@')) {
       setCurrentView(AppView.PROFILE);
     } else if (path === '/profile') {
@@ -2170,6 +2173,9 @@ const App: React.FC = () => {
                 <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
                   <BookOpen size={18} />
                 </button>
+                <button onClick={() => navigate('/tutor')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TYPING_TUTOR ? `bg-purple-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Typing Tutor">
+                  <GraduationCap size={18} />
+                </button>
                 <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
                   <Activity size={18} />
                   {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
@@ -2605,6 +2611,13 @@ const App: React.FC = () => {
           </div>
         ) : currentView === AppView.TUTORIALS ? (
           <Tutorials />
+        ) : currentView === AppView.TYPING_TUTOR ? (
+          <TypingTutor 
+            provider={provider} 
+            token={githubToken} 
+            isPro={profile.is_pro || false}
+            accentColor={profile.accentColor}
+          />
         ) : currentView === AppView.PRIVACY ? (
           <PrivacyPolicy onBack={() => {
             window.history.pushState({}, '', '/');
