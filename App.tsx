@@ -479,6 +479,24 @@ const App: React.FC = () => {
       setCurrentView(AppView.NOT_FOUND);
     }
   }, [location, user]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        document.title = "Hey! Come back and type!";
+      } else {
+        document.title = "ZippyType | Professional Speed Typing";
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Clean up the listener when the component unmounts
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const [joinRoomId, setJoinRoomId] = useState("");
   const [isShaking, setIsShaking] = useState(false);
   const [blindMode, setBlindMode] = useState(() => localStorage.getItem('blind_mode') === 'true');
