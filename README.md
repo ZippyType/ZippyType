@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" alt="ZippyType Logo" width="120" height="120" style="border-radius: 20px;" />
+  <img src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" alt="ZippyType Logo"  width="120" height="120" style="border-radius: 20px;" />
   <h1>ZippyType ⚡</h1>
   <p><strong>A high-performance typing competition app featuring AI-generated challenges, real-time analytics, and visual progress tracking.</strong></p>
   <p>
-    <a href="https://zippytype.vercel.app">🌐 Visit ZippyType</a> •
-    <a href="https://discord.gg/mN56zE5q5g">💬 Join Discord</a> •
-    <a href="https://x.com/ZippyType/">🐦 Follow on X</a>
+    <a href="https://zippytype.vercel.app" target="_blank" rel="noopener noreferrer">🌐 Visit ZippyType</a> •
+    <a href="https://discord.gg/mN56zE5q5g" target="_blank" rel="noopener noreferrer">💬 Join Discord</a> •
+    <a href="https://x.com/ZippyType/" target="_blank" rel="noopener noreferrer">🐦 Follow on X</a>
   </p>
 </div>
 
