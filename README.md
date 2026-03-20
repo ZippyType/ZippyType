@@ -66,11 +66,11 @@
 
 ZippyType acts as an OAuth 2.1 provider! You can integrate "Sign in with ZippyType" into your own applications.
 
-1. Create an account on [ZippyType](https://zippytype.vercel.app).
+1. Create an account on [ZippyType](https://zippytype.vercel.app/developer).
 2. Navigate to the **Developer Dashboard**.
 3. Create a new OAuth Application to get your `client_id` and `client_secret`.
 4. Use the provided HTML or React snippets to add the login button to your site.
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the APGL License.
