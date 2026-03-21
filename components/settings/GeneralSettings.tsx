@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, Layout, Globe, X, Sparkles, Link2, CheckCircle2 } from 'lucide-react';
+import { Volume2, Layout, Globe, X, Sparkles, Link2, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { SoundProfile, KeyboardLayout } from '../../types';
 import { useTranslation } from '../../src/LanguageContext';
 
@@ -33,6 +33,8 @@ interface GeneralSettingsProps {
   triggerPayment: () => void;
   resetTutorial: () => void;
   triggerOldBrowser: () => void;
+  theme: string;
+  setTheme: (t: string) => void;
 }
 
 const languages = [
@@ -73,7 +75,9 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   triggerError,
   triggerPayment,
   resetTutorial,
-  triggerOldBrowser
+  triggerOldBrowser,
+  theme,
+  setTheme
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
@@ -150,6 +154,37 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           <span>{currentLangLabel}</span>
           <span className="text-[10px] text-cyan-400 uppercase tracking-widest">{t('change')}</span>
         </button>
+      </div>
+
+      <div className="p-6 glass border border-white/10 rounded-2xl space-y-4">
+        <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+          <Sun size={14} className="text-amber-400" /> {t('theme')}
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => setTheme('dark')}
+            className={`flex items-center justify-center gap-3 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${theme === 'dark' ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg' : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10'}`}
+          >
+            <Moon size={16} /> Dark
+          </button>
+          <button
+            onClick={() => setTheme('light')}
+            className={`flex items-center justify-center gap-3 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${theme === 'light' ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg' : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10'}`}
+          >
+            <Sun size={16} /> Light
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2 pt-2">
+          {['midnight', 'cyberpunk', 'nordic', 'sunset', 'forest', 'ocean'].map(t => (
+            <button
+              key={t}
+              onClick={() => setTheme(t)}
+              className={`py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${theme === t ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50' : 'bg-black/10 text-slate-600 border-white/5 hover:border-white/10'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="p-6 glass border border-white/10 rounded-2xl space-y-6">

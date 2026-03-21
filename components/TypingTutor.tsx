@@ -20,10 +20,17 @@ interface Lesson {
   tips: string[];
 }
 
+const FALLBACK_LESSON: Lesson = {
+  title: "Home Row Mastery",
+  content: "The home row is the base for all touch typing. Keep your fingers anchored on ASDF and JKL;.",
+  exercise: "all sad lads fall as dad asks for a flask",
+  tips: ["Keep your wrists level", "Don't look at the keys", "Return to home row after every stroke"]
+};
+
 const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accentColor }) => {
   const [level, setLevel] = useState(1);
   const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userInput, setUserInput] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -42,6 +49,7 @@ const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accen
       setLesson(data);
     } catch (error) {
       console.error("Failed to fetch lesson:", error);
+      setLesson(FALLBACK_LESSON);
     } finally {
       setLoading(false);
     }
@@ -248,7 +256,26 @@ const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accen
               )}
             </AnimatePresence>
           </motion.div>
-        ) : null}
+        ) : (
+          <motion.div 
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glass p-20 rounded-[3rem] flex flex-col items-center justify-center gap-6 border border-white/5 text-center"
+          >
+            <AlertCircle className="w-12 h-12 text-rose-500" />
+            <div className="space-y-2">
+              <p className="text-white font-black uppercase tracking-widest text-sm">Neural Link Failed</p>
+              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Could not establish connection to Tactical AI</p>
+            </div>
+            <button 
+              onClick={() => fetchLesson(level)}
+              className="px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all"
+            >
+              Re-establish Link
+            </button>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Progress Stats */}

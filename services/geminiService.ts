@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type } from "@google/genai";
 import { Difficulty, GameMode } from "../types";
 
 export const fetchTypingText = async (
@@ -10,7 +10,8 @@ export const fetchTypingText = async (
   textLength: 'short' | 'medium' | 'long' = 'medium',
   language: string = 'en',
   mode: GameMode = GameMode.SOLO,
-  subMode: 'daily' | 'speed' | 'accuracy' | 'themed' = 'daily'
+  subMode: 'daily' | 'speed' | 'accuracy' | 'themed' = 'daily',
+  isPro: boolean = false
 ): Promise<string> => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
@@ -28,6 +29,9 @@ export const fetchTypingText = async (
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
+        config: {
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+        }
       });
       
       if (!response || !response.text) {
@@ -82,6 +86,9 @@ export const fetchTypingText = async (
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      }
     });
     
     if (!response || !response.text) {
@@ -108,6 +115,9 @@ export const fetchCoachNote = async (wpm: number, accuracy: number, errors: numb
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      }
     });
     return response.text?.trim() || "Great run! Focus on maintaining rhythm during difficult transitions.";
   } catch {
@@ -124,7 +134,8 @@ export const fetchTypingLesson = async (
   if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
   const ai = new GoogleGenAI({ apiKey });
 
-  const model = isPro ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+  // Using flash for everyone to ensure "mini" speed and behavior as requested
+  const model = 'gemini-3-flash-preview';
 
   const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
   ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
@@ -144,10 +155,17 @@ export const fetchTypingLesson = async (
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
-      config: { responseMimeType: "application/json" }
+      config: { 
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+      }
     });
     
-    return JSON.parse(response.text || "{}");
+    const parsed = JSON.parse(response.text || "{}");
+    if (!parsed.title || !parsed.exercise) {
+      throw new Error("Invalid lesson format from AI");
+    }
+    return parsed;
   } catch (error) {
     console.error("Gemini Lesson Error:", error);
     return {

@@ -24,7 +24,6 @@ const fingerMapping: Record<string, { hand: 'L' | 'R'; finger: number }> = {
   '[': { hand: 'R', finger: 4 }, ']': { hand: 'R', finger: 4 }, '{': { hand: 'R', finger: 4 }, '}': { hand: 'R', finger: 4 },
   "'": { hand: 'R', finger: 4 }, '"': { hand: 'R', finger: 4 }, '-': { hand: 'R', finger: 4 }, '_': { hand: 'R', finger: 4 }, '+': { hand: 'R', finger: 4 }, '=': { hand: 'R', finger: 4 },
   '\\': { hand: 'R', finger: 4 }, '|': { hand: 'R', finger: 4 }, '`': { hand: 'L', finger: 1 }, '~': { hand: 'L', finger: 1 },
-  '/': { hand: 'R', finger: 4 }, '?': { hand: 'R', finger: 4 },
   ' ': { hand: 'R', finger: 0 }, // Thumb (Space)
 };
 

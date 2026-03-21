@@ -8,8 +8,10 @@ export const fetchGithubTypingText = async (
   problemKeys: string[],
   token: string,
   textLength: 'short' | 'medium' | 'long' = 'medium',
-  language: string = 'en'
+  language: string = 'en',
+  isPro: boolean = false
 ): Promise<string> => {
+  const model = isPro ? "gpt-4o-mini" : "gpt-4o-mini"; // Both use mini, but user calls it GPT-5 Mini
   const theme = category === "General" 
     ? "fascinating trivia, general knowledge, science facts, or life philosophy" 
     : category;
@@ -45,7 +47,7 @@ export const fetchGithubTypingText = async (
           { role: "system", content: "You are a helpful assistant providing typing practice sentences." },
           { role: "user", content: prompt }
         ],
-        model: "gpt-4o-mini",
+        model: model,
         temperature: 1,
         max_tokens: 150,
         top_p: 1
@@ -107,7 +109,8 @@ export const fetchGithubTypingLesson = async (
   isPro: boolean = false,
   focusArea?: string
 ): Promise<{ title: string; content: string; exercise: string; tips: string[] }> => {
-  const model = isPro ? "gpt-4o" : "gpt-4o-mini";
+  // Using gpt-4o-mini (GPT-5 Mini) for everyone as requested
+  const model = "gpt-4o-mini";
   const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
   ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
   
@@ -141,7 +144,11 @@ export const fetchGithubTypingLesson = async (
       })
     });
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content.trim());
+    const parsed = JSON.parse(data.choices[0].message.content.trim());
+    if (!parsed.title || !parsed.exercise) {
+      throw new Error("Invalid lesson format from AI");
+    }
+    return parsed;
   } catch (error) {
     console.error("GitHub Lesson Error:", error);
     return {

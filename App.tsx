@@ -72,7 +72,7 @@ const ACCENT_COLORS = {
 const AVATARS = ['😊', '😎', '🤖', '🦊', '🐱', '🐶', '🦄', '🌈', '⚡', '✨'];
 const LOADING_MESSAGES = ["Fetching new text...", "AI is generating...", "Preparing your race...", "Syncing stats..."];
 
-const DEFAULT_PROFILE: UserProfile = { username: 'Guest Player', avatar: '😊', accentColor: 'indigo' };
+const DEFAULT_PROFILE: UserProfile = { username: 'Guest Player', avatar: '😊', accentColor: 'indigo', theme: 'dark' };
 const DEFAULT_POMODORO: PomodoroSettings = { enabled: true, defaultMinutes: 25, size: 'medium' };
 
 const POWER_UP_REFS = {
@@ -2416,6 +2416,13 @@ const App: React.FC = () => {
                     triggerPayment={triggerPayment}
                     resetTutorial={resetTutorial}
                     triggerOldBrowser={() => setSimulateOldBrowser(true)}
+                    theme={profile.theme || 'dark'}
+                    setTheme={(t) => {
+                      const newProfile = { ...profile, theme: t };
+                      setProfile(newProfile);
+                      localStorage.setItem('user_profile', JSON.stringify(newProfile));
+                      savePrefs(newProfile);
+                    }}
                   />
                 )}
 
@@ -2784,8 +2791,12 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 cubic-bezier(0.23, 1, 0.32, 1) flex items-center gap-5 px-6" style={{ left: `${Math.min(progress, 88)}%` }}>
-                          <div className={`relative flex items-center justify-center w-11 h-11 rounded-2xl bg-slate-950 border-2 transition-all duration-300 shadow-2xl ${p.id === 'me' ? 'scale-110 border-white ring-4 ring-indigo-500/20' : 'border-white/10'}`}>
-                            <span className="text-2xl drop-shadow-glow">{p.avatar}</span>
+                          <div className={`relative flex items-center justify-center w-11 h-11 rounded-2xl bg-slate-950 border-2 transition-all duration-300 shadow-2xl ${p.id === 'me' ? 'scale-110 border-white ring-4 ring-indigo-500/20' : 'border-white/10'} overflow-hidden`}>
+                            {p.avatar.startsWith('http') || p.avatar.startsWith('/') ? (
+                              <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className="text-2xl drop-shadow-glow">{p.avatar}</span>
+                            )}
                           </div>
                           <div className="flex flex-col drop-shadow-md">
                             <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${p.id === 'me' ? 'text-white' : 'text-white/60'}`}>{p.name}</span>

@@ -167,7 +167,13 @@ const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
               {(p as any).is_ready && (
                 <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg">Ready</div>
               )}
-              <div className="text-4xl drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300">{p.avatar}</div>
+              <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center text-4xl drop-shadow-lg transform group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+                {p.avatar.startsWith('http') || p.avatar.startsWith('/') ? (
+                  <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  p.avatar
+                )}
+              </div>
               <span className={`text-[10px] font-black uppercase tracking-widest ${p.id === user?.id ? 'text-indigo-400' : 'text-slate-400'}`}>
                 {p.name}
               </span>

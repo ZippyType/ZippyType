@@ -73,6 +73,86 @@ async function startServer() {
     }
   });
 
+  // Pro Text Generation with pooled GitHub tokens
+  app.post('/api/generate-pro-text', async (req, res) => {
+    const { difficulty, topic, textLength, language, isGuest, mode } = req.body;
+    
+    // Pool of GitHub tokens from environment variables (supporting both casings)
+    const tokens = [
+      process.env.GITHUB_TOKEN,
+      process.env.GITHUB_TOK_1 || process.env.Github_tok_1,
+      process.env.GITHUB_TOK_2 || process.env.Github_tok_2,
+      process.env.GITHUB_TOK_3 || process.env.Github_tok_3,
+      process.env.GITHUB_TOK_4 || process.env.Github_tok_4,
+      process.env.GITHUB_TOK_5 || process.env.Github_tok_5,
+      process.env.GITHUB_TOK_6 || process.env.Github_tok_6,
+      process.env.GITHUB_TOK_7 || process.env.Github_tok_7,
+      process.env.GITHUB_TOK_8 || process.env.Github_tok_8,
+      process.env.GITHUB_TOK_9 || process.env.Github_tok_9,
+      process.env.GITHUB_TOK_10 || process.env.Github_tok_10
+    ].filter(Boolean) as string[];
+
+    const token = tokens[Math.floor(Math.random() * tokens.length)] || process.env.GUEST_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({ error: "No available AI tokens for Pro generation." });
+    }
+
+    // Mask token for logging
+    const maskedToken = token.length > 8 ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` : "****";
+    console.log(`Attempting Pro generation with token: ${maskedToken}`);
+
+    const theme = topic === "General" 
+      ? "fascinating trivia, general knowledge, science facts, or life philosophy" 
+      : topic;
+
+    let lengthConstraint = "";
+    if (textLength === 'short') lengthConstraint = "exactly 6 to 8 words total";
+    else if (textLength === 'medium') lengthConstraint = "exactly 10 to 13 words total";
+    else if (textLength === 'long') lengthConstraint = "exactly 20 to 25 words total";
+
+    const prompt = `Generate a single ${difficulty} level typing practice sentence about "${theme}". 
+    The language of the text MUST be: ${language}.
+    
+    CRITICAL CONSTRAINTS:
+    - You MUST generate a sentence that is ${lengthConstraint}. 
+    - DO NOT exceed or fall short of this word count. Count the words carefully before returning.
+    Return ONLY the sentence text, no quotes, no labels, and no surrounding whitespace.`;
+
+    try {
+      const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "You are a helpful assistant providing typing practice sentences." },
+            { role: "user", content: prompt }
+          ],
+          // Using gpt-4o-mini as the "GPT-5 Mini" requested by user
+          model: "gpt-4o-mini",
+          temperature: 1,
+          max_tokens: 150,
+          top_p: 1
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "GitHub API Error");
+      }
+
+      const data = await response.json();
+      const text = data.choices[0].message.content.trim();
+      res.json({ text });
+    } catch (error: any) {
+      console.error("Pro generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/oauth/client-info", async (req, res) => {
     const { client_id } = req.query;
     try {
