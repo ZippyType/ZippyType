@@ -84,7 +84,7 @@ const POWER_UP_REFS = {
 const normalizeText = (text: string, isCode: boolean = false) => {
   let cleaned = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/—/g, "-").replace(/…/g, "...");
   if (!isCode) {
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    cleaned = cleaned.replace(/\s+/g, ' ');
   }
   return cleaned;
 };
@@ -1202,7 +1202,7 @@ const App: React.FC = () => {
       }
       
       if (rid !== requestCounter.current) return;
-      const cleaned = normalizeText(text, gameMode === GameMode.CODE || currentMode === GameMode.CODE);
+      const cleaned = normalizeText(text.trim(), gameMode === GameMode.CODE || currentMode === GameMode.CODE);
       setCurrentText(cleaned); setLoading(false); runTypewriter(cleaned);
     } catch (e: any) {
       console.error("AI text generation failed.", e);
@@ -2923,7 +2923,16 @@ const App: React.FC = () => {
                   )}
                 </div>
                 {isActive && !loading && !isTypingOut && (
-                  <textarea ref={inputRef} value={userInput} onChange={handleInputChange} className="absolute inset-0 opacity-0 cursor-default resize-none" autoFocus />
+                  <textarea 
+                    ref={inputRef} 
+                    value={userInput} 
+                    onChange={handleInputChange} 
+                    className="absolute inset-0 opacity-0 cursor-default resize-none" 
+                    autoFocus 
+                    autoCapitalize="none" 
+                    autoCorrect="off" 
+                    spellCheck="false"
+                  />
                 )}
               </div>
 
