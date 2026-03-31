@@ -1,7 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, linkUserToIp } from '../services/supabaseService';
-import { X, Loader2, Sparkles, LogIn, UserPlus, AlertCircle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Sparkles, LogIn, UserPlus, AlertCircle, ShieldCheck, Eye, EyeOff, Shield } from 'lucide-react';
+import ReCAPTCHA from "react-google-recaptcha";
+
+const RECAPTCHA_SITE_KEY = "6LdDLZ4sAAAAAAYCuU8gcxsx6vWqo4WbcqTSnMka";
 
 interface AuthProps {
   onClose: () => void;
@@ -17,6 +20,10 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
@@ -36,10 +43,26 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
     return () => window.removeEventListener('message', handleMessage);
   }, [onClose]);
 
+  const handleCaptchaChange = (token: string | null) => {
+    if (token) {
+      setCaptchaVerified(true);
+      setIsVerifying(false);
+    } else {
+      setCaptchaVerified(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (!isLogin && !captchaVerified) {
+      setShowCaptcha(true);
+      setIsVerifying(true);
+      return;
+    }
+
+    setLoading(true);
 
     if (!isLogin && password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -221,13 +244,26 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
             </div>
           )}
 
+          {showCaptcha && !isLogin && (
+            <div className="flex justify-center py-2 animate-in fade-in zoom-in duration-300">
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={RECAPTCHA_SITE_KEY}
+                onChange={handleCaptchaChange}
+                theme="dark"
+              />
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isVerifying}
             className="w-full py-5 bg-gradient-to-r from-[#FF5F00] to-[#FF8C00] hover:opacity-90 disabled:opacity-50 text-white font-black rounded-xl transition-all shadow-2xl flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[10px] active:scale-[0.98]"
           >
             {loading ? (
               <><Loader2 className="animate-spin" size={20} /> Loading...</>
+            ) : isVerifying ? (
+              <><Shield className="animate-pulse" size={20} /> Verify Captcha</>
             ) : (
               <>{isLogin ? <LogIn size={20} /> : <UserPlus size={20} />} {isLogin ? 'Login' : 'Sign Up'}</>
             )}
