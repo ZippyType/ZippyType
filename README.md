@@ -1,5 +1,7 @@
+<h1>IF YOU ARE ON MY PROFILE, READ THIS. OTHERWISE, GO DOWN UNTIL YOU SEE THE ZippyType LOGO. THANKS.</h1>
+<h2>Anyways this is my profile. My main project is ZippyType, but I have different stuff. Like AaronOS, my own custom OS. It's Unix/Linux like, but NOT based off on Linux or UNIX. I also have a own programming language called Ark. Its Python based. Also, I have my own social media app called Chirper. Those are all seperate projects. Anyways thanks for looking on my profile. :) </h2>
 <div align="center">
-  <img src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" alt="ZippyType Logo" width="120" height="120" style="border-radius: 20px;" />
+<img src="https://ewdrrhdsxjrhxyzgjokg.supabase.co/storage/v1/object/public/assets/logos.png" alt="ZippyType Logo" width="120" height="120" style="border-radius: 20px;" />
   <h1>ZippyType ⚡</h1>
   <p><strong>A high-performance typing competition app featuring AI-generated challenges, real-time analytics, and visual progress tracking.</strong></p>
   <p>
