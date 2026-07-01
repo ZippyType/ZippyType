@@ -115,17 +115,41 @@ const App: React.FC = () => {
     navigate(path);
   };
 
+  const handleManageSubscription = async () => {
+    setIsSubscribing(true);
+    try {
+      const res = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to open subscription portal');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error connecting to billing server');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   const handleSubscribe = async () => {
     setIsSubscribing(true);
     try {
-      const res = await fetch('/api/create-checkout-session', {
+      const res = await fetch('/api/create-subscription-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, discordId: profile.discord_id })
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+        setCheckoutMode('subscription');
+        setShowSubscription(true);
       } else {
         alert('Failed to initialize subscription');
       }
@@ -2105,11 +2129,11 @@ const App: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-sm font-black text-white uppercase tracking-tighter">{EN.zippyTypePro} Feature</h3>
-              <p className="text-[11px] font-medium text-slate-400">This feature is only for {EN.zippyTypePro} users. Upgrade now to unlock custom themes, unlimited AI generation, and advanced analytics.</p>
+              <h3 className="text-sm font-black text-text-main uppercase tracking-tighter">{EN.zippyTypePro} Feature</h3>
+              <p className="text-[11px] font-medium text-text-muted">This feature is only for {EN.zippyTypePro} users. Upgrade now to unlock custom themes, unlimited AI generation, and advanced analytics.</p>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowProModal(false)} className="flex-1 px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all">Maybe Later</button>
+              <button onClick={() => setShowProModal(false)} className="flex-1 px-6 py-3 bg-nav-bg hover:bg-white/10 text-text-main font-black rounded-xl text-[9px] uppercase tracking-widest transition-all">Maybe Later</button>
               <button 
                 onClick={() => { 
                   setShowProModal(false); 
@@ -2155,49 +2179,67 @@ const App: React.FC = () => {
                   <span className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-400/80 truncate">{profile.handle || profile.username}</span>
                 </div>
               </div>
+              {!profile.is_pro && user && !user.is_ip_persistent && (
+                <button onClick={() => navigate('/settings/billing')} className="md:hidden px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2 shrink-0">
+                  <Crown size={12} />
+                  PRO
+                </button>
+              )}
             </div>
             <nav className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
-              <div className="flex bg-black/50 p-1 rounded-2xl border border-white/5 shadow-lg shrink-0">
-                <button onClick={() => navigate('/')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Game Home"><Gamepad2 size={18} /></button>
-                <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Profile">
+              <div className="flex bg-nav-bg p-1 rounded-2xl border border-glass-border shadow-lg shrink-0">
+                <button onClick={() => navigate('/')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.GAME ? `bg-indigo-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Game Home"><Gamepad2 size={18} /></button>
+                <button onClick={() => checkRestricted(AppView.PROFILE)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.PROFILE ? `bg-emerald-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Profile">
                   <User size={18} />
-                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-bg-deep/80 rounded-full p-0.5"><Lock size={8} className="text-text-muted" /></div>}
                 </button>
-                <button onClick={() => navigate('/leaderboard')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Leaderboard">
+                <button onClick={() => navigate('/leaderboard')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.LEADERBOARD ? `bg-amber-500 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Leaderboard">
                   <Trophy size={18} />
                 </button>
-                <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Clans">
+                <button onClick={() => checkRestricted(AppView.CLANS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.CLANS ? `bg-indigo-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Clans">
                   <Users size={18} />
-                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-bg-deep/80 rounded-full p-0.5"><Lock size={8} className="text-text-muted" /></div>}
                 </button>
-                <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Academy">
+                <button onClick={() => navigate('/tutorial')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TUTORIALS ? `bg-blue-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Academy">
                   <BookOpen size={18} />
                 </button>
-                <button onClick={() => navigate('/tutor')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TYPING_TUTOR ? `bg-purple-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Typing Tutor">
+                <button onClick={() => navigate('/tutor')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.TYPING_TUTOR ? `bg-purple-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Typing Tutor">
                   <GraduationCap size={18} />
                 </button>
-                <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="History">
+                <button onClick={() => checkRestricted(AppView.HISTORY)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.HISTORY ? `bg-rose-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="History">
                   <Activity size={18} />
-                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-bg-deep/80 rounded-full p-0.5"><Lock size={8} className="text-text-muted" /></div>}
                 </button>
-                <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Search">
+                <button onClick={() => navigate('/search')} className={`p-2.5 rounded-xl transition-all ${currentView === AppView.SEARCH ? `bg-teal-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Search">
                   <Search size={18} />
                 </button>
-                <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-slate-500 hover:text-white'}`} title="Settings">
+                <button onClick={() => checkRestricted(AppView.SETTINGS)} className={`p-2.5 rounded-xl transition-all relative ${currentView === AppView.SETTINGS ? `bg-slate-600 text-white shadow-lg` : 'text-text-muted hover:text-white'}`} title="Settings">
                   <SettingsIcon size={18} />
-                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-slate-900/80 rounded-full p-0.5"><Lock size={8} className="text-slate-400" /></div>}
+                  {(!user || user.is_ip_persistent) && <div className="absolute top-1 right-1 bg-bg-deep/80 rounded-full p-0.5"><Lock size={8} className="text-text-muted" /></div>}
                 </button>
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
                 {!profile.is_pro && user && !user.is_ip_persistent && (
-                  <button onClick={() => navigate('/settings/billing')} className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                  <button onClick={() => navigate('/settings/billing')} className="hidden md:flex px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 items-center gap-2">
                     <Crown size={12} />
                     PRO
                   </button>
                 )}
-                <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-white transition-all shadow-md">{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
-                {user ? (<button onClick={() => supabase.auth.signOut()} className="p-2.5 bg-black/50 border border-white/5 rounded-xl text-slate-500 hover:text-rose-400 transition-all shadow-md"><LogOut size={18} /></button>) : (<button onClick={() => navigate('/login')} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
+                <button 
+                  onClick={() => {
+                    const nextThemes: Record<string, string> = { light: 'dark', dark: 'midnight', midnight: 'cyberpunk', cyberpunk: 'nordic', nordic: 'sunset', sunset: 'forest', forest: 'ocean', ocean: 'light' };
+                    const newTheme = nextThemes[profile.theme || 'dark'] || 'dark';
+                    setProfile({ ...profile, theme: newTheme });
+                  }}
+                  className="p-2.5 bg-nav-bg border border-glass-border rounded-xl text-text-muted hover:text-text-main transition-all shadow-md group relative"
+                  title="Cycle Theme"
+                >
+                  {profile.theme === 'light' ? <Sun size={18} /> : <Moon size={18} />}
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 text-[6px] text-white uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">Theme: {profile.theme}</span>
+                </button>
+                <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 bg-nav-bg border border-glass-border rounded-xl text-text-muted hover:text-text-main transition-all shadow-md">{soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
+                {user ? (<button onClick={() => supabase.auth.signOut()} className="p-2.5 bg-nav-bg border border-glass-border rounded-xl text-text-muted hover:text-rose-400 transition-all shadow-md"><LogOut size={18} /></button>) : (<button onClick={() => navigate('/login')} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[8px] uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95">{EN.login}</button>)}
               </div>
             </nav>
           </header>
@@ -2508,9 +2550,9 @@ const App: React.FC = () => {
                         <span className="text-sm font-medium text-slate-500"> {EN.month}</span>
                       </div>
                       <button 
-                        onClick={handleSubscribe}
-                        disabled={isSubscribing || profile.is_pro}
-                        className={`px-8 py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs transition-all w-full md:w-auto flex items-center justify-center gap-2 ${profile.is_pro ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg hover:shadow-orange-500/25 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'}`}
+                        onClick={profile.is_pro ? handleManageSubscription : handleSubscribe}
+                        disabled={isSubscribing}
+                        className={`px-8 py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs transition-all w-full md:w-auto flex items-center justify-center gap-2 ${profile.is_pro ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25 hover:scale-105 active:scale-95' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg hover:shadow-orange-500/25 hover:scale-105 active:scale-95'} disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isSubscribing ? (
                           <>
@@ -2518,7 +2560,7 @@ const App: React.FC = () => {
                             {EN.processing}
                           </>
                         ) : profile.is_pro ? (
-                          "You are already a ZippyType Pro user"
+                          "Manage Subscription"
                         ) : (
                           EN.upgradeToPro
                         )}
@@ -2683,16 +2725,16 @@ const App: React.FC = () => {
                             resetGameStats(); 
                           } 
                         }}
-                        className={`relative w-48 p-4 rounded-2xl border transition-all text-left group overflow-hidden flex-shrink-0 ${gameMode === m.mode ? 'glass border-indigo-500/50 shadow-lg' : 'bg-black/20 border-white/5 hover:border-white/10'}`}
+                        className={`relative w-48 p-4 rounded-2xl border transition-all text-left group overflow-hidden flex-shrink-0 ${gameMode === m.mode ? 'glass border-indigo-500/50 shadow-lg' : 'bg-nav-bg border-glass-border hover:border-white/10'}`}
                       >
                         <div className={`absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
                         <div className="relative flex flex-col gap-2">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === m.mode ? 'bg-indigo-500 text-white' : 'bg-white/5 text-slate-500 group-hover:text-white'}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === m.mode ? 'bg-indigo-500 text-white' : 'bg-bg-deep/20 text-text-muted group-hover:text-text-main'}`}>
                             {isLocked ? <Lock size={14} /> : m.icon}
                           </div>
                           <div>
-                            <h3 className={`text-[10px] font-black uppercase tracking-widest ${gameMode === m.mode ? 'text-white' : 'text-slate-400'}`}>{m.label}</h3>
-                            <p className="text-[8px] font-medium text-slate-500 mt-0.5 leading-tight line-clamp-1">{m.desc}</p>
+                            <h3 className={`text-[10px] font-black uppercase tracking-widest ${gameMode === m.mode ? 'text-text-main' : 'text-text-muted'}`}>{m.label}</h3>
+                            <p className="text-[8px] font-medium text-text-muted mt-0.5 leading-tight line-clamp-1">{m.desc}</p>
                           </div>
                         </div>
                         {gameMode === m.mode && (
@@ -2879,7 +2921,7 @@ const App: React.FC = () => {
                           />
                           <button
                             onClick={() => setShowLengthModal(true)}
-                            className="w-full py-2 bg-black/20 border border-white/5 hover:border-white/20 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-all"
+                            className="w-full py-2 bg-nav-bg border border-glass-border hover:border-white/20 rounded-xl text-[10px] font-bold text-text-muted uppercase tracking-widest transition-all"
                           >
                             Length: {textLength === 'short' ? 'Short (6-8 words)' : textLength === 'medium' ? 'Medium (10-13 words)' : 'Long (20-25 words)'}
                           </button>
@@ -2896,7 +2938,7 @@ const App: React.FC = () => {
                         if (c === '\n') {
                           return (
                             <span key={i} className="relative inline-block">
-                              <span className={`text-[10px] opacity-30 ${isTyped ? (isCorrect ? 'text-emerald-500' : 'text-rose-500') : 'text-slate-500'}`}>↵</span>
+                              <span className={`text-[10px] opacity-30 ${isTyped ? (isCorrect ? 'text-emerald-500' : 'text-rose-500') : 'text-text-muted'}`}>↵</span>
                               <br />
                             </span>
                           );
@@ -2911,9 +2953,10 @@ const App: React.FC = () => {
                               color: isCorrect ? '#10b981' : '#f43f5e',
                               scale: isCorrect ? [1, 1.1, 1] : 1,
                               opacity: blindMode ? 0 : 1
-                            } : { color: '#ffffff' }}
-                            className={`inline-block transition-all duration-75 ${isTyped ? (isCorrect ? 'font-bold' : 'bg-rose-500/20 rounded px-0.5 mx-0.5') : isCurrent ? `text-white border-b-2 animate-pulse` : 'text-white'}`} 
-                            style={{ borderBottomColor: isCurrent ? 'rgb(var(--accent-primary))' : 'transparent' }}
+                            } : { color: 'var(--text-main)' }}
+                            className={`inline-block transition-all duration-75 ${isTyped ? (isCorrect ? 'font-bold' : 'bg-rose-500/20 rounded px-0.5 mx-0.5') : isCurrent ? `text-text-main border-b-2 animate-pulse` : 'text-text-main'}`} 
+                            style={{ borderBottomColor: isCurrent ? 'rgb(var(--accent-primary))' : 'transparent', opacity: isTyped ? (blindMode ? 0 : 1) : isCurrent ? 1 : 0.6 }}
+                            transition={{ duration: 0.1 }}
                           >
                             {c === ' ' ? '\u00A0' : c}
                           </motion.span>

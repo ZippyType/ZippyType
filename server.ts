@@ -2,6 +2,11 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51T2vpI0AlKSl27CKhQHW9reGxQz9s9Yt4elIt7jOGGGjAELY0BaGMZ8GPpzcG7sRuSVGjM4ALMhd0lBMiOnXTGL1002bRLLS1Z', {
+  apiVersion: '2025-01-27.acacia' as any,
+});
 
 // Initialize Supabase Admin
 const supabaseAdmin = createClient(
@@ -16,6 +21,105 @@ async function startServer() {
   app.use(express.json());
 
   // API routes
+  
+  app.post('/api/create-subscription-intent', async (req, res) => {
+    try {
+      const customer = await stripe.customers.create();
+      const price = await stripe.prices.create({
+        unit_amount: 500, // $5.00
+        currency: 'usd',
+        recurring: { interval: 'month' },
+        product_data: { name: 'ZippyType Pro Subscription' },
+      });
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: price.id }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
+      });
+      const invoice = subscription.latest_invoice as any;
+      const paymentIntent = invoice.payment_intent as unknown as Stripe.PaymentIntent;
+      res.status(200).json({
+        subscriptionId: subscription.id,
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (error: any) {
+      console.error('Stripe error:', error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  app.post('/api/create-gift-card-intent', async (req, res) => {
+    const { userId, months } = req.body;
+    const numMonths = parseInt(months || '1');
+    const discount = Math.min(0.5, (numMonths - 1) * 0.1);
+    const amount = Math.round(numMonths * 500 * (1 - discount));
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'usd',
+        metadata: { type: 'gift_card', months: numMonths.toString(), userId: userId || '' },
+      });
+      res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error('Stripe error:', error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  app.post('/api/confirm-gift-card', async (req, res) => {
+    const { paymentIntentId } = req.body;
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status === 'succeeded' && paymentIntent.metadata.type === 'gift_card') {
+        const months = parseInt(paymentIntent.metadata.months || '1');
+        const code = Math.random().toString(36).substring(2, 14).toUpperCase().match(/.{1,4}/g)?.join('-') || 'ZIPPY-GIFT';
+        const { data, error } = await supabaseAdmin
+          .from('gift_cards')
+          .insert({ code, months, created_by: paymentIntent.metadata.userId || null })
+          .select().single();
+        if (error) throw error;
+        res.status(200).json({ code, months });
+      } else {
+        res.status(400).json({ error: 'Payment not successful or invalid' });
+      }
+    } catch (error: any) {
+      console.error('Confirm gift card error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/create-portal-session', async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    try {
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (userError || !userData?.user) throw new Error("User not found");
+      const email = userData.user.email;
+      const customers = await stripe.customers.search({ query: `email:\'${email}\'` });
+      let customerId = customers.data.length > 0 ? customers.data[0].id : null;
+      if (!customerId) {
+         const newCustomer = await stripe.customers.create({ email });
+         customerId = newCustomer.id;
+      }
+      const origin = req.headers.origin || req.headers.referer || 'http://localhost:3000';
+      const baseUrl = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${baseUrl}/settings/billing`,
+      });
+      res.status(200).json({ url: session.url });
+    } catch (error: any) {
+      console.error('Stripe Portal error:', error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  app.get('/api/member-count', async (req, res) => {
+    res.json({ count: 1242 });
+  });
+
   app.get('/api/oauth/apps', async (req, res) => {
     const { userId } = req.query;
     try {
@@ -254,7 +358,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

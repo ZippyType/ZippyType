@@ -52,7 +52,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history, speedUnit, problemKe
           <div className="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
             <Activity size={22} />
           </div>
-          <h2 className="text-base font-black text-white uppercase tracking-tighter">Performance Analytics</h2>
+          <h2 className="text-base font-black text-text-main uppercase tracking-tighter">Performance Analytics</h2>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -62,8 +62,8 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history, speedUnit, problemKe
           <StatsCard label="Best Speed" value={bestWpm.toString()} icon={<TrophyIcon />} color="rose" />
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-white/5">
-          <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+        <div className="space-y-4 pt-6 border-t border-glass-border">
+          <h3 className="text-xs font-black text-text-main uppercase tracking-widest flex items-center gap-2">
             <TrendingUp size={14} className="text-indigo-400" /> Progression
           </h3>
           <div className="h-[300px] w-full">
@@ -71,24 +71,24 @@ const HistoryView: React.FC<HistoryViewProps> = ({ history, speedUnit, problemKe
           </div>
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-white/5">
+        <div className="space-y-4 pt-6 border-t border-glass-border">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <h3 className="text-xs font-black text-text-main uppercase tracking-widest flex items-center gap-2">
               <Play size={14} className="text-emerald-400" /> Recent Races
             </h3>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Last 5 Sessions</span>
+            <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">Last 5 Sessions</span>
           </div>
           <div className="grid grid-cols-1 gap-3">
             {history.slice(0, 5).map(h => (
-              <div key={h.id} className="group flex items-center justify-between p-5 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all">
+              <div key={h.id} className="group flex items-center justify-between p-5 bg-nav-bg hover:bg-bg-deep/40 rounded-2xl border border-glass-border transition-all">
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{new Date(h.date).toLocaleDateString()}</span>
-                    <span className="text-xs font-mono text-slate-400">{new Date(h.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{new Date(h.date).toLocaleDateString()}</span>
+                    <span className="text-xs font-mono text-text-muted">{new Date(h.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <div className="h-8 w-px bg-white/10" />
+                  <div className="h-8 w-px bg-glass-border" />
                   <div className="flex flex-col">
-                    <span className="text-lg font-black text-white">{h.wpm} <span className="text-[10px] text-slate-500 uppercase tracking-widest">{speedUnit}</span></span>
+                    <span className="text-lg font-black text-text-main">{h.wpm} <span className="text-[10px] text-text-muted uppercase tracking-widest">{speedUnit}</span></span>
                     <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{h.accuracy}% Acc</span>
                   </div>
                 </div>

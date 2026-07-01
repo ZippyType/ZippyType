@@ -94,43 +94,43 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setPro
         <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl">
           <ShieldCheck size={22} />
         </div>
-        <h2 className="text-base font-black text-white uppercase tracking-tighter">Account Management</h2>
+        <h2 className="text-base font-black text-text-main uppercase tracking-tighter">Account Management</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Profile Section */}
-        <div className="p-8 glass border border-white/10 rounded-[2rem] space-y-6">
+        <div className="p-8 glass border border-glass-border rounded-[2rem] space-y-6">
           <div className="flex items-center gap-3">
             <User size={18} className="text-emerald-400" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">Profile Identity</h3>
+            <h3 className="text-xs font-black text-text-main uppercase tracking-widest">Profile Identity</h3>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">Display Name</label>
+              <label className="text-[9px] font-black uppercase text-text-muted tracking-[0.3em] ml-1">Display Name</label>
               <input 
                 type="text" 
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                className="w-full bg-input-bg border border-glass-border rounded-xl px-4 py-3 text-text-main font-bold text-sm outline-none focus:border-indigo-500 transition-all"
                 placeholder="Zippy Pilot"
                 maxLength={30}
               />
-              <p className="text-[9px] text-slate-500 font-medium ml-1">This is how you'll appear on leaderboards and in races.</p>
+              <p className="text-[9px] text-text-muted font-medium ml-1">This is how you'll appear on leaderboards and in races.</p>
             </div>
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">Pilot Handle (@)</label>
+              <label className="text-[9px] font-black uppercase text-text-muted tracking-[0.3em] ml-1">Pilot Handle (@)</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">@</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-bold text-sm">@</span>
                 <input 
                   type="text" 
                   value={handle}
                   onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                  className="w-full bg-input-bg border border-glass-border rounded-xl pl-8 pr-4 py-3 text-text-main font-bold text-sm outline-none focus:border-indigo-500 transition-all"
                   placeholder="handle"
                   maxLength={20}
                 />
               </div>
-              <p className="text-[9px] text-slate-500 font-medium ml-1">Your unique identifier for profiles and clans.</p>
+              <p className="text-[9px] text-text-muted font-medium ml-1">Your unique identifier for profiles and clans.</p>
             </div>
             <button 
               onClick={handleUpdateProfile}
@@ -143,29 +143,29 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setPro
         </div>
 
         {/* Password Section */}
-        <div className="p-8 glass border border-white/10 rounded-[2rem] space-y-6">
+        <div className="p-8 glass border border-glass-border rounded-[2rem] space-y-6">
           <div className="flex items-center gap-3">
             <Lock size={18} className="text-rose-400" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">Security Update</h3>
+            <h3 className="text-xs font-black text-text-main uppercase tracking-widest">Security Update</h3>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">New Password</label>
+              <label className="text-[9px] font-black uppercase text-text-muted tracking-[0.3em] ml-1">New Password</label>
               <input 
                 type="password" 
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                className="w-full bg-input-bg border border-glass-border rounded-xl px-4 py-3 text-text-main font-bold text-sm outline-none focus:border-indigo-500 transition-all"
                 placeholder="••••••••"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em] ml-1">Confirm Password</label>
+              <label className="text-[9px] font-black uppercase text-text-muted tracking-[0.3em] ml-1">Confirm Password</label>
               <input 
                 type="password" 
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                className="w-full bg-input-bg border border-glass-border rounded-xl px-4 py-3 text-text-main font-bold text-sm outline-none focus:border-indigo-500 transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -200,9 +200,9 @@ const AccountSettings: React.FC<AccountSettingsProps> = ({ user, profile, setPro
           <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl">
             <ShieldCheck size={22} />
           </div>
-          <h3 className="text-xs font-black text-white uppercase tracking-widest">Developer Integration</h3>
+          <h3 className="text-xs font-black text-text-main uppercase tracking-widest">Developer Integration</h3>
         </div>
-        <p className="text-sm text-slate-400 font-medium">
+        <p className="text-sm text-text-muted font-medium">
           Integrate ZippyType into your own applications using our OAuth 2.1 API. Allow users to sign in with their ZippyType account and access their profile data.
         </p>
         <button 

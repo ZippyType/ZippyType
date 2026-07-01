@@ -338,7 +338,13 @@ const Auth: React.FC<AuthProps> = ({ onClose }) => {
 
         <div className="mt-10 text-center space-y-4">
           <button
-            onClick={() => { setIsLogin(!isLogin); setError(null); }}
+            onClick={() => { 
+              setIsLogin(!isLogin); 
+              setError(null);
+              setShowCaptcha(false);
+              setCaptchaVerified(false);
+              setIsVerifying(false);
+            }}
             className="text-slate-600 hover:text-indigo-400 text-[9px] font-black uppercase tracking-[0.3em] transition-all"
           >
             {isLogin ? "Create an account" : "Already have an account?"}

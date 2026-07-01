@@ -53,8 +53,8 @@ const HistoryChart: React.FC<HistoryChartProps> = ({ history, speedUnit }) => {
             onClick={() => setActiveMetric(m.id as any)}
             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border ${
               activeMetric === m.id 
-                ? `bg-white/10 border-white/20 text-white shadow-lg` 
-                : 'bg-black/20 border-white/5 text-slate-500 hover:text-white hover:border-white/10'
+                ? `bg-nav-bg border-indigo-500/50 text-text-main shadow-lg` 
+                : 'bg-bg-deep/20 border-glass-border text-text-muted hover:text-text-main hover:border-white/10'
             }`}
           >
             <span style={{ color: activeMetric === m.id ? m.color : 'inherit' }}>{m.icon}</span>
@@ -63,7 +63,7 @@ const HistoryChart: React.FC<HistoryChartProps> = ({ history, speedUnit }) => {
         ))}
       </div>
 
-      <div className="h-64 w-full bg-black/20 rounded-xl border border-white/5 p-4 relative overflow-hidden">
+      <div className="h-64 w-full bg-nav-bg rounded-xl border border-glass-border p-4 relative overflow-hidden">
         <ResponsiveContainer width="100%" height={256} minWidth={0}>
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
@@ -72,25 +72,25 @@ const HistoryChart: React.FC<HistoryChartProps> = ({ history, speedUnit }) => {
                 <stop offset="95%" stopColor={currentMetric.color} stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
             <XAxis 
               dataKey="name" 
-              stroke="#64748b" 
+              stroke="var(--text-muted)" 
               fontSize={10} 
               tickLine={false} 
               axisLine={false} 
             />
             <YAxis 
-              stroke="#64748b" 
+              stroke="var(--text-muted)" 
               fontSize={10} 
               tickLine={false} 
               axisLine={false}
               tickFormatter={(val) => `${val}${activeMetric === 'accuracy' ? '%' : ''}`}
             />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '0.1em' }}
-              itemStyle={{ color: '#f8fafc' }}
-              cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+              contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: '12px', fontSize: '10px', textTransform: 'uppercase', fontWeight: '900', letterSpacing: '0.1em', color: 'var(--text-main)' }}
+              itemStyle={{ color: 'var(--text-main)' }}
+              cursor={{ stroke: 'var(--glass-border)', strokeWidth: 1 }}
               formatter={(value: any) => [`${value}${activeMetric === 'accuracy' ? '%' : ''}`, currentMetric.label]}
             />
             <Area 

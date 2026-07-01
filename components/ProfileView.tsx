@@ -198,7 +198,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Profile Header */}
-      <div className="glass rounded-[2.5rem] p-8 md:p-12 border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="glass rounded-[2.5rem] p-8 md:p-12 border border-glass-border shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full -mr-48 -mt-48 pointer-events-none" />
         
         <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
@@ -260,10 +260,10 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                   <input 
                     value={newUsername}
                     onChange={e => setNewUsername(e.target.value)}
-                    className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-2xl font-black text-white outline-none focus:border-indigo-500 transition-all w-full max-w-xs"
+                    className="bg-input-bg border border-glass-border rounded-xl px-4 py-2 text-2xl font-black text-text-main outline-none focus:border-indigo-500 transition-all w-full max-w-xs"
                   />
                 ) : (
-                  <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter italic">
+                  <h2 className="text-4xl md:text-5xl font-black text-text-main uppercase tracking-tighter italic">
                     {profile.username}
                   </h2>
                 )}
