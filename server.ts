@@ -196,7 +196,11 @@ async function startServer() {
       process.env.GITHUB_TOK_10 || process.env.Github_tok_10
     ].filter(Boolean) as string[];
 
-    const token = tokens[Math.floor(Math.random() * tokens.length)] || process.env.GUEST_TOKEN;
+    let token = isGuest ? process.env.GUEST_TOKEN : (tokens[Math.floor(Math.random() * tokens.length)] || process.env.GUEST_TOKEN);
+    if (isGuest && !token) {
+      console.warn("isGuest is true but GUEST_TOKEN is empty. Falling back to pooled tokens.");
+      token = tokens[Math.floor(Math.random() * tokens.length)];
+    }
 
     if (!token) {
       return res.status(500).json({ error: "No available AI tokens for Pro generation." });
@@ -204,7 +208,7 @@ async function startServer() {
 
     // Mask token for logging
     const maskedToken = token.length > 8 ? `${token.substring(0, 4)}...${token.substring(token.length - 4)}` : "****";
-    console.log(`Attempting Pro generation with token: ${maskedToken}`);
+    console.log(`Attempting Pro generation (isGuest=${isGuest}) with token: ${maskedToken}`);
 
     const theme = topic === "General" 
       ? "fascinating trivia, general knowledge, science facts, or life philosophy" 
@@ -253,6 +257,160 @@ async function startServer() {
       res.json({ text });
     } catch (error: any) {
       console.error("Pro generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Pro Coach Note Generation for Guests or pooled users
+  app.post('/api/generate-pro-coach-note', async (req, res) => {
+    const { wpm, accuracy, errors, missedChars, isGuest } = req.body;
+    
+    const tokens = [
+      process.env.GITHUB_TOKEN,
+      process.env.GITHUB_TOK_1 || process.env.Github_tok_1,
+      process.env.GITHUB_TOK_2 || process.env.Github_tok_2,
+      process.env.GITHUB_TOK_3 || process.env.Github_tok_3,
+      process.env.GITHUB_TOK_4 || process.env.Github_tok_4,
+      process.env.GITHUB_TOK_5 || process.env.Github_tok_5,
+      process.env.GITHUB_TOK_6 || process.env.Github_tok_6,
+      process.env.GITHUB_TOK_7 || process.env.Github_tok_7,
+      process.env.GITHUB_TOK_8 || process.env.Github_tok_8,
+      process.env.GITHUB_TOK_9 || process.env.Github_tok_9,
+      process.env.GITHUB_TOK_10 || process.env.Github_tok_10
+    ].filter(Boolean) as string[];
+
+    let token = isGuest ? process.env.GUEST_TOKEN : (tokens[Math.floor(Math.random() * tokens.length)] || process.env.GUEST_TOKEN);
+    if (isGuest && !token) {
+      token = tokens[Math.floor(Math.random() * tokens.length)];
+    }
+
+    if (!token) {
+      return res.status(500).json({ error: "No available AI tokens." });
+    }
+
+    const missedStr = missedChars && missedChars.length > 0 ? missedChars.join(', ') : "none";
+    const prompt = `Act as an elite typing instructor. Provide a brief, encouraging coach report (maximum 2 sentences) for a typing run.
+    Performance:
+    - Speed: ${wpm} WPM
+    - Accuracy: ${accuracy}%
+    - Errors: ${errors}
+    - Missed keys: [${missedStr}]
+    
+    Give highly specific feedback based on these metrics. Be punchy, brief, and highly educational. No surrounding markdown, just the plain text.`;
+
+    try {
+      const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "You are a professional typing coach." },
+            { role: "user", content: prompt }
+          ],
+          model: "gpt-4o-mini",
+          temperature: 0.7,
+          max_tokens: 100
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("GitHub AI API Error");
+      }
+
+      const data = await response.json();
+      const note = data.choices[0].message.content.trim();
+      res.json({ note });
+    } catch (error: any) {
+      console.error("Coach report error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Pro Lesson Generation for Guests or pooled users
+  app.post('/api/generate-pro-lesson', async (req, res) => {
+    const { level, focusArea, isGuest } = req.body;
+    
+    const tokens = [
+      process.env.GITHUB_TOKEN,
+      process.env.GITHUB_TOK_1 || process.env.Github_tok_1,
+      process.env.GITHUB_TOK_2 || process.env.Github_tok_2,
+      process.env.GITHUB_TOK_3 || process.env.Github_tok_3,
+      process.env.GITHUB_TOK_4 || process.env.Github_tok_4,
+      process.env.GITHUB_TOK_5 || process.env.Github_tok_5,
+      process.env.GITHUB_TOK_6 || process.env.Github_tok_6,
+      process.env.GITHUB_TOK_7 || process.env.Github_tok_7,
+      process.env.GITHUB_TOK_8 || process.env.Github_tok_8,
+      process.env.GITHUB_TOK_9 || process.env.Github_tok_9,
+      process.env.GITHUB_TOK_10 || process.env.Github_tok_10
+    ].filter(Boolean) as string[];
+
+    let token = isGuest ? process.env.GUEST_TOKEN : (tokens[Math.floor(Math.random() * tokens.length)] || process.env.GUEST_TOKEN);
+    if (isGuest && !token) {
+      token = tokens[Math.floor(Math.random() * tokens.length)];
+    }
+
+    if (!token) {
+      return res.status(500).json({ error: "No available AI tokens." });
+    }
+
+    const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
+    ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
+    
+    Provide the lesson in JSON format with the following structure:
+    {
+      "title": "Lesson Title",
+      "content": "Explanation of the lesson (maximum 2 sentences).",
+      "exercise": "A practice sentence or drill (10-15 words) that reinforces the lesson.",
+      "tips": ["Tip 1", "Tip 2"]
+    }
+    
+    Ensure the exercise is relevant to the technique. For example, if the lesson is about home row, the exercise should use home row keys.
+    Do not wrap the response in markdown code blocks. Just return the raw JSON object.`;
+
+    try {
+      const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: "You are an elite typing instructor." },
+            { role: "user", content: prompt }
+          ],
+          model: "gpt-4o-mini",
+          temperature: 0.7,
+          max_tokens: 300
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("GitHub AI API Error");
+      }
+
+      const data = await response.json();
+      const rawText = data.choices[0].message.content.trim();
+      
+      // Try to parse JSON safely
+      let parsed;
+      try {
+        let cleanText = rawText;
+        if (cleanText.startsWith("```")) {
+          cleanText = cleanText.replace(/```json\n?/g, '').replace(/```/g, '');
+        }
+        parsed = JSON.parse(cleanText.trim());
+      } catch (e) {
+        console.error("Failed to parse JSON response:", rawText);
+        throw new Error("Invalid response format from AI");
+      }
+
+      res.json(parsed);
+    } catch (error: any) {
+      console.error("Lesson error:", error);
       res.status(500).json({ error: error.message });
     }
   });

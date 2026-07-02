@@ -53,10 +53,27 @@ export const generateCoachNote = async (
   wpm: number,
   accuracy: number,
   errors: number,
-  missedChars: string[]
+  missedChars: string[],
+  isGuest: boolean = false
 ): Promise<string> => {
+  if (isGuest || !token) {
+    try {
+      const res = await fetch('/api/generate-pro-coach-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wpm, accuracy, errors, missedChars, isGuest: true })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.note;
+      }
+    } catch (e) {
+      console.error("Failed to fetch guest coach report:", e);
+    }
+    return "Great run! Focus on maintaining rhythm during difficult transitions.";
+  }
+
   if (provider === AIProvider.GITHUB) {
-    if (!token) throw new Error("GitHub token is required for GitHub AI provider.");
     const { fetchGithubCoachNote } = await import("./githubService");
     return await fetchGithubCoachNote(wpm, accuracy, errors, missedChars, token);
   } else {
@@ -70,10 +87,31 @@ export const generateTypingLesson = async (
   token: string | undefined,
   isPro: boolean,
   level: number,
-  focusArea?: string
+  focusArea?: string,
+  isGuest: boolean = false
 ): Promise<{ title: string; content: string; exercise: string; tips: string[] }> => {
+  if (isGuest || !token) {
+    try {
+      const res = await fetch('/api/generate-pro-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level, focusArea, isGuest: true })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.error("Failed to fetch guest lesson:", e);
+    }
+    return {
+      title: `Level ${level}: Foundation Mastery`,
+      content: "Practice key home row and finger transitions.",
+      exercise: "the quick brown fox jumps over the lazy dog",
+      tips: ["Keep your wrists level", "Accuracy first, speed second"]
+    };
+  }
+
   if (provider === AIProvider.GITHUB) {
-    if (!token) throw new Error("GitHub token is required for GitHub AI provider.");
     const { fetchGithubTypingLesson } = await import("./githubService");
     return await fetchGithubTypingLesson(level, token, isPro, focusArea);
   } else {

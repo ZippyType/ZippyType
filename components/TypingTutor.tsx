@@ -11,6 +11,7 @@ interface TypingTutorProps {
   token?: string;
   isPro: boolean;
   accentColor: string;
+  isGuest?: boolean;
 }
 
 interface Lesson {
@@ -27,7 +28,7 @@ const FALLBACK_LESSON: Lesson = {
   tips: ["Keep your wrists level", "Don't look at the keys", "Return to home row after every stroke"]
 };
 
-const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accentColor }) => {
+const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accentColor, isGuest = false }) => {
   const [level, setLevel] = useState(1);
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ const TypingTutor: React.FC<TypingTutorProps> = ({ provider, token, isPro, accen
     setUserInput("");
     setIsActive(false);
     try {
-      const data = await generateTypingLesson(provider, token, isPro, currentLevel);
+      const data = await generateTypingLesson(provider, token, isPro, currentLevel, undefined, isGuest);
       setLesson(data);
     } catch (error) {
       console.error("Failed to fetch lesson:", error);

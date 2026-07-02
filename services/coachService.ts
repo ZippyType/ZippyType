@@ -9,7 +9,8 @@ export const getCoachReport = async (
   wpm: number,
   accuracy: number,
   errors: number,
-  missedChars: string[]
+  missedChars: string[],
+  isGuest: boolean = false
 ): Promise<string> => {
-  return await generateCoachNote(provider, token, isPro, wpm, accuracy, errors, missedChars);
+  return await generateCoachNote(provider, token, isPro, wpm, accuracy, errors, missedChars, isGuest);
 };

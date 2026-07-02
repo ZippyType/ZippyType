@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseService';
 import { PlayerState, UserProfile } from '../types';
-import { Rocket, Copy, Play, Users, MapPin, Wifi, CheckCircle2 } from 'lucide-react';
+import { Rocket, Copy, Play, Users, MapPin, Wifi, CheckCircle2, Crown } from 'lucide-react';
 
 interface MultiplayerLobbyProps {
   user: any;
@@ -162,6 +162,16 @@ const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
             <div key={p.id} className="flex flex-col items-center gap-3 p-4 bg-black/20 rounded-2xl border border-white/5 relative group">
               {p.id === hostId && (
                 <div className="absolute -top-2 -right-2 bg-amber-500 text-black text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg">Host</div>
+              )}
+              {p.is_pro && p.id !== hostId && (
+                <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1">
+                  <Crown size={8} /> PRO
+                </div>
+              )}
+              {p.is_pro && p.id === hostId && (
+                <div className="absolute -top-6 -right-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[8px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1">
+                  <Crown size={8} /> PRO
+                </div>
               )}
               {/* @ts-ignore - is_ready might not be on PlayerState yet, need to update types */}
               {(p as any).is_ready && (

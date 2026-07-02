@@ -27,11 +27,8 @@ export const fetchTypingText = async (
 
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-        config: {
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-        }
+        model: 'gemini-3.5-flash',
+        contents: prompt
       });
       
       if (!response || !response.text) {
@@ -84,11 +81,8 @@ export const fetchTypingText = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-      }
+      model: 'gemini-3.5-flash',
+      contents: prompt
     });
     
     if (!response || !response.text) {
@@ -113,11 +107,8 @@ export const fetchCoachNote = async (wpm: number, accuracy: number, errors: numb
     if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-      }
+      model: 'gemini-3.5-flash',
+      contents: prompt
     });
     return response.text?.trim() || "Great run! Focus on maintaining rhythm during difficult transitions.";
   } catch {
@@ -135,7 +126,7 @@ export const fetchTypingLesson = async (
   const ai = new GoogleGenAI({ apiKey });
 
   // Using flash for everyone to ensure "mini" speed and behavior as requested
-  const model = 'gemini-3-flash-preview';
+  const model = 'gemini-3.5-flash';
 
   const prompt = `Act as an elite typing instructor. Create a typing lesson for level ${level}.
   ${focusArea ? `The focus area is: ${focusArea}.` : 'Focus on foundational techniques if level is low, or advanced speed/accuracy if high.'}
@@ -156,8 +147,7 @@ export const fetchTypingLesson = async (
       model: model,
       contents: prompt,
       config: { 
-        responseMimeType: "application/json",
-        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+        responseMimeType: "application/json"
       }
     });
     

@@ -140,6 +140,7 @@ export interface UserPreferences {
   show_heatmap?: boolean;
   blind_mode?: boolean;
   streamer_mode?: boolean;
+  save_replays?: boolean;
 }
 
 export interface PowerUp {
@@ -212,6 +213,7 @@ export interface PlayerState {
   isBot: boolean;
   isGhost?: boolean;
   avatar: string;
+  is_pro?: boolean;
 }
 
 export interface RoomState {

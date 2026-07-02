@@ -29,12 +29,15 @@ interface GeneralSettingsProps {
   setBlindMode: (v: boolean) => void;
   streamerMode: boolean;
   setStreamerMode: (v: boolean) => void;
+  saveReplays: boolean;
+  setSaveReplays: (v: boolean) => void;
   triggerError: () => void;
   triggerPayment: () => void;
   resetTutorial: () => void;
   triggerOldBrowser: () => void;
   theme: string;
   setTheme: (t: string) => void;
+  isPro: boolean;
 }
 
 const languages = [
@@ -72,12 +75,15 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   setBlindMode,
   streamerMode,
   setStreamerMode,
+  saveReplays,
+  setSaveReplays,
   triggerError,
   triggerPayment,
   resetTutorial,
   triggerOldBrowser,
   theme,
-  setTheme
+  setTheme,
+  isPro
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
@@ -178,10 +184,14 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
           {['midnight', 'cyberpunk', 'nordic', 'sunset', 'forest', 'ocean'].map(t => (
             <button
               key={t}
-              onClick={() => setTheme(t)}
-              className={`py-2 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${theme === t ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50' : 'bg-black/10 text-slate-600 border-white/5 hover:border-white/10'}`}
+              onClick={() => {
+                if (isPro) setTheme(t);
+                else triggerPayment();
+              }}
+              className={`py-2 flex items-center justify-center gap-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${theme === t ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50' : 'bg-black/10 text-slate-600 border-white/5 hover:border-white/10'}`}
             >
               {t}
+              {!isPro && <span className="text-[10px]">🔒</span>}
             </button>
           ))}
         </div>
@@ -337,6 +347,36 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
               className={`w-10 h-5 rounded-full transition-all relative ${streamerMode ? 'bg-blue-600' : 'bg-slate-700'}`}
             >
               <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${streamerMode ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/5 hover:bg-black/60 transition-colors">
+            <div>
+              <div className="text-sm font-bold text-white mb-1">Save Replays</div>
+              <div className="text-xs text-white/50 font-mono">Store keystroke replays of your races (disabling will clear existing data).</div>
+            </div>
+            <button 
+              onClick={() => {
+                const newValue = !saveReplays;
+                setSaveReplays(newValue);
+                if (!newValue) {
+                  // Purge replay data
+                  const historyRaw = localStorage.getItem('zippy_history');
+                  if (historyRaw) {
+                    try {
+                      const history = JSON.parse(historyRaw);
+                      const purged = history.map((r: any) => {
+                        const { replayData, ...rest } = r;
+                        return rest;
+                      });
+                      localStorage.setItem('zippy_history', JSON.stringify(purged));
+                    } catch {}
+                  }
+                }
+              }}
+              className={`w-10 h-5 rounded-full transition-all relative ${saveReplays ? 'bg-green-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${saveReplays ? 'left-6' : 'left-1'}`} />
             </button>
           </div>
         </div>

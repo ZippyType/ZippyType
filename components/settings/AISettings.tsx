@@ -18,6 +18,7 @@ interface AISettingsProps {
   setSpeedUnit: (u: 'wpm' | 'cpm') => void;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   isPro?: boolean;
+  isGuest?: boolean;
 }
 
 const AISettings: React.FC<AISettingsProps> = ({
@@ -34,7 +35,8 @@ const AISettings: React.FC<AISettingsProps> = ({
   speedUnit,
   setSpeedUnit,
   saveStatus,
-  isPro = false
+  isPro = false,
+  isGuest = false
 }) => {
   return (
     <div className="glass rounded-[2rem] p-10 space-y-10 border border-white/10 shadow-2xl relative animate-in slide-in-from-bottom-4 duration-300">
@@ -70,20 +72,26 @@ const AISettings: React.FC<AISettingsProps> = ({
         <div className="space-y-6">
           <div className="space-y-3">
             <label className="text-[9px] font-black uppercase text-slate-500 tracking-[0.3em]">Text Generator</label>
-            <div className="flex bg-black/50 p-1.5 rounded-xl border border-white/5 shadow-inner">
-              <button 
-                onClick={() => setProvider(AIProvider.GEMINI)} 
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${provider === AIProvider.GEMINI ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-              >
-                <Globe size={12}/> Gemini
-              </button>
-              <button 
-                onClick={() => setProvider(AIProvider.GITHUB)} 
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${provider === AIProvider.GITHUB ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-              >
-                <Github size={12}/> GPT-4o (GitHub)
-              </button>
-            </div>
+            {isGuest ? (
+              <div className="bg-black/50 p-4 rounded-xl border border-white/5 text-slate-400 text-[10px] leading-relaxed font-bold uppercase tracking-wider">
+                Guest mode utilizes your custom <span className="text-cyan-400 font-extrabold">Guest Token</span> automatically. Sign in to choose different AI providers or configure personal credentials.
+              </div>
+            ) : (
+              <div className="flex bg-black/50 p-1.5 rounded-xl border border-white/5 shadow-inner">
+                <button 
+                  onClick={() => setProvider(AIProvider.GEMINI)} 
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${provider === AIProvider.GEMINI ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                >
+                  <Globe size={12}/> Gemini
+                </button>
+                <button 
+                  onClick={() => setProvider(AIProvider.GITHUB)} 
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${provider === AIProvider.GITHUB ? 'bg-white/10 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                >
+                  <Github size={12}/> GPT-4o (GitHub)
+                </button>
+              </div>
+            )}
           </div>
           
           {provider === AIProvider.GITHUB && (

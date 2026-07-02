@@ -9,6 +9,8 @@ interface LeaderboardEntry {
   handle?: string;
   score: number;
   rank?: number;
+  avatar_url?: string;
+  is_pro?: boolean;
 }
 
 interface LeaderboardProps {
@@ -36,12 +38,26 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
 
       if (error) throw error;
 
-      if (data) {
-        // Add rank
+      if (data && data.length > 0) {
+        // Fetch profiles to get avatar and pro status
+        const userIds = data.map((d: any) => d.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, avatar_url, is_pro')
+          .in('id', userIds);
+
+        const profilesMap = (profilesData || []).reduce((acc: any, p: any) => {
+          acc[p.id] = p;
+          return acc;
+        }, {});
+
+        // Add rank and profile data
         const rankedData = data.map((entry: any, index: number) => ({
           ...entry,
           rank: index + 1,
-          handle: entry.handle || entry.username || 'unknown'
+          handle: entry.handle || entry.username || 'unknown',
+          avatar_url: profilesMap[entry.user_id]?.avatar_url,
+          is_pro: profilesMap[entry.user_id]?.is_pro
         }));
         setEntries(rankedData);
 
@@ -50,12 +66,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
           const userEntry = rankedData.find(e => e.user_id === currentUser.id);
           if (userEntry) {
             setUserRank(userEntry.rank);
-          } else {
-            // If user is not in top 100, try to fetch their specific rank
-            // This is a bit complex without a specific rank function, so we might skip for now
-            // or just show "Unranked" or "> 100"
           }
         }
+      } else {
+        setEntries([]);
       }
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -144,17 +158,27 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ currentUser, userProfile }) =
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${entry.user_id === currentUser?.id ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
-                          <User size={16} />
+                        <div className={`p-2 rounded-lg ${entry.user_id === currentUser?.id ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'} overflow-hidden flex items-center justify-center w-8 h-8 p-0`}>
+                          {entry.avatar_url ? (
+                            <img src={entry.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={16} />
+                          )}
                         </div>
-                        <span className={`font-bold ${entry.user_id === currentUser?.id ? 'text-indigo-400' : 'text-slate-200'}`}>
-                          <span className="text-slate-500 font-mono mr-2">
+                        <span className={`font-bold flex items-center flex-wrap gap-2 ${entry.user_id === currentUser?.id ? 'text-indigo-400' : 'text-slate-200'}`}>
+                          <span className="text-slate-500 font-mono">
                             @{entry.user_id === currentUser?.id ? (userProfile.handle || entry.handle) : entry.handle}
                           </span>
-                          <span className="opacity-50 mx-2">|</span>
+                          <span className="opacity-50">|</span>
                           {entry.user_id === currentUser?.id ? (
                             (userProfile.username && userProfile.username !== 'Guest Player') ? userProfile.username : (userProfile.handle || entry.username)
                           ) : entry.username}
+                          
+                          {entry.is_pro && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-400 text-[8px] font-black uppercase tracking-widest border border-amber-500/30">
+                              <Crown size={8} /> PRO
+                            </span>
+                          )}
                         </span>
                         {entry.user_id === currentUser?.id && (
                           <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[9px] font-bold uppercase tracking-wider border border-indigo-500/30">
