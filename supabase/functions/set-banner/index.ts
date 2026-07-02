@@ -13,7 +13,36 @@ serve(async (req) => {
   }
 
   try {
-    const { severity, title, message } = await req.json()
+    const payload = await req.json()
+    const { severity, title, message, action, clear } = payload
+
+    // Retrieve Supabase environment secrets
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Supabase environment variables are not configured in the project settings.")
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Handle clearing the active banner
+    if (action === 'clear' || clear === true) {
+      const { error } = await supabase
+        .from('system_banners')
+        .update({ active: false })
+        .eq('active', true)
+
+      if (error) throw error
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "All system banners have been successfully cleared." 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Validate severity: must be 'error', 'info', or 'warning'
     if (!severity || !['error', 'info', 'warning'].includes(severity)) {
@@ -31,17 +60,7 @@ serve(async (req) => {
       )
     }
 
-    // Retrieve Supabase environment secrets
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Supabase environment variables are not configured in the project settings.")
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Insert new banner. We can mark all other previous banners as active=false (optional but clean)
+    // Insert new banner. We can mark all other previous banners as active=false
     await supabase
       .from('system_banners')
       .update({ active: false })

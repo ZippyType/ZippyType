@@ -25,7 +25,7 @@ const OAuthCallback = () => {
 
       if (data.session) {
         setStatus('success');
-        setMessage('Successfully signed in! Closing window...');
+        setMessage('Success! Redirecting back to ZippyType...');
         if (window.opener) {
           window.opener.postMessage({ type: 'OAUTH_SUCCESS', session: data.session }, window.location.origin);
           setTimeout(() => window.close(), 1000);
@@ -38,7 +38,7 @@ const OAuthCallback = () => {
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
                  setStatus('success');
-                 setMessage('Successfully signed in! Closing window...');
+                 setMessage('Success! Redirecting back to ZippyType...');
                  if (window.opener) {
                     window.opener.postMessage({ type: 'OAUTH_SUCCESS', session }, window.location.origin);
                     setTimeout(() => window.close(), 1000);
@@ -67,7 +67,9 @@ const OAuthCallback = () => {
       {status === 'success' && <CheckCircle2 className="mb-4 text-emerald-500" size={48} />}
       {status === 'error' && <XCircle className="mb-4 text-rose-500" size={48} />}
       
-      <h2 className="text-xl font-black uppercase tracking-widest mb-2">{status === 'error' ? 'Authentication Failed' : 'Authenticating'}</h2>
+      <h2 className="text-xl font-black uppercase tracking-widest mb-2">
+        {status === 'error' ? 'Authentication Failed' : status === 'success' ? 'Success!' : 'Authenticating'}
+      </h2>
       <p className="text-sm font-medium text-slate-400 max-w-md">{message}</p>
     </div>
   );

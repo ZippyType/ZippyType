@@ -7,7 +7,7 @@ import {
   Gamepad2, LogOut, X, Volume2, VolumeX, Github, Globe, User, EyeOff, Eye, 
   Activity, Dna, Clock, Lock, ShieldAlert, AlertCircle, Timer, Download, Upload, FileJson,
   BookOpen, Book, ChevronRight, Sparkles, ExternalLink, Info, HelpCircle, CheckCircle2, Search, FileText,
-  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal, Share2, GraduationCap
+  Keyboard as KeyboardIcon, Copy, Sun, Moon, ShieldCheck, AlertTriangle, Gift, Loader2, Crown, Users, Code, MoreHorizontal, Share2, GraduationCap, Wifi, WifiOff
 } from 'lucide-react';
 import { useTranslation } from './src/LanguageContext';
 import { Difficulty, GameMode, CompetitiveType, TypingResult, PlayerState, PowerUp, PowerUpType, AppView, AIProvider, UserProfile, UserPreferences, PomodoroSettings, SoundProfile, KeyboardLayout, Achievement, Quest, ReplayEvent } from './types';
@@ -446,9 +446,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (countdown !== null && countdown > 0) {
+      playSound('countdown_beep');
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else if (countdown === 0) {
+      playSound('countdown_go');
       const timer = setTimeout(() => {
         setCountdown(null);
         setTimeout(() => inputRef.current?.focus(), 50);
@@ -554,6 +556,91 @@ const App: React.FC = () => {
   const [blindMode, setBlindMode] = useState(() => localStorage.getItem('blind_mode') === 'true');
   const [streamerMode, setStreamerMode] = useState(() => localStorage.getItem('streamer_mode') === 'true');
   const [saveReplays, setSaveReplays] = useState(() => localStorage.getItem('save_replays') !== 'false'); // default true
+  const [confettiIntensity, setConfettiIntensity] = useState<'none' | 'low' | 'medium' | 'high'>(() => (localStorage.getItem('confetti_intensity') as any) || 'high');
+  const [confettiStyle, setConfettiStyle] = useState<'classic' | 'cosmic' | 'gold' | 'sakura'>(() => (localStorage.getItem('confetti_style') as any) || 'classic');
+  const [isOffline, setIsOffline] = useState(() => !navigator.onLine);
+  const [offlineBuffer, setOfflineBuffer] = useState<TypingResult[]>(() => {
+    try {
+      const saved = localStorage.getItem('zippy_offline_buffer');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const syncOfflineBuffer = useCallback(async (bufferToSync?: TypingResult[]) => {
+    const queue = bufferToSync || offlineBuffer;
+    if (!user || queue.length === 0) return;
+
+    console.log(`Syncing ${queue.length} offline races to Supabase...`);
+    
+    // Sync sequentially or concurrently
+    for (const res of queue) {
+      try {
+        await saveHistory(user.id, res);
+        
+        // Update Leaderboard Score
+        const scoreIncrement = Math.max(0, res.textLength - res.errors);
+        if (scoreIncrement > 0) {
+          try {
+            const leaderboardName = profile.handle || profile.username || user.email?.split('@')[0] || 'Pilot';
+            await supabase.rpc('update_leaderboard_score', { 
+              p_user_id: user.id, 
+              p_username: leaderboardName, 
+              p_score_increment: scoreIncrement 
+            });
+          } catch {}
+        }
+      } catch (err) {
+        console.error("Failed to sync offline record", err);
+      }
+    }
+
+    setOfflineBuffer([]);
+    localStorage.removeItem('zippy_offline_buffer');
+  }, [user, offlineBuffer, profile]);
+
+  useEffect(() => {
+    const goOnline = () => {
+      setIsOffline(false);
+      const saved = localStorage.getItem('zippy_offline_buffer');
+      if (saved) {
+        try {
+          const queue = JSON.parse(saved);
+          if (queue.length > 0) {
+            syncOfflineBuffer(queue);
+          }
+        } catch {}
+      }
+    };
+    const goOffline = () => {
+      setIsOffline(true);
+      setGameMode(prev => (prev === GameMode.DAILY || prev === GameMode.COMPETITIVE) ? GameMode.SOLO : prev);
+    };
+
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+
+    const interval = setInterval(() => {
+      if (navigator.onLine && !isOffline) {
+        const saved = localStorage.getItem('zippy_offline_buffer');
+        if (saved) {
+          try {
+            const queue = JSON.parse(saved);
+            if (queue.length > 0) {
+              syncOfflineBuffer(queue);
+            }
+          } catch {}
+        }
+      }
+    }, 15000);
+
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+      clearInterval(interval);
+    };
+  }, [syncOfflineBuffer, isOffline]);
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
     try {
       const saved = localStorage.getItem('zippy_achievements');
@@ -788,8 +875,6 @@ const App: React.FC = () => {
       setCurrentView(AppView.PRIVACY);
     } else if (path === '/redirect') {
       setCurrentView(AppView.REDIRECT);
-    } else if (path !== '/') {
-      setCurrentView(AppView.NOT_FOUND);
     }
   }, []);
 
@@ -1775,26 +1860,40 @@ const App: React.FC = () => {
         coachNote: note,
         replayData: saveReplays ? replayEventsRef.current : undefined
       };
-      await saveHistory(user.id, result);
-      setHistory(prev => [result, ...prev].slice(0, 50));
-      setLastResult(result);
-      setShowResultModal(true);
-      checkAchievements(result);
-      checkQuests(result);
+      if (isOffline) {
+        // Offline Mode: buffer the result locally instead of posting to Supabase
+        setHistory(prev => [result, ...prev].slice(0, 50));
+        setLastResult(result);
+        setShowResultModal(true);
+        checkAchievements(result);
+        checkQuests(result);
 
-      // Update Leaderboard Score
-      const scoreIncrement = Math.max(0, currentText.length - errors);
-      if (scoreIncrement > 0) {
-        try {
-          // Ensure we have a username - prioritize handle for leaderboard identity
-          const leaderboardName = profile.handle || profile.username || user.email?.split('@')[0] || 'Pilot';
-          await supabase.rpc('update_leaderboard_score', { 
-            p_user_id: user.id, 
-            p_username: leaderboardName, 
-            p_score_increment: scoreIncrement 
-          });
-        } catch (err) {
-          console.error("Failed to update leaderboard:", err);
+        const updatedQueue = [...offlineBuffer, result];
+        setOfflineBuffer(updatedQueue);
+        localStorage.setItem('zippy_offline_buffer', JSON.stringify(updatedQueue));
+      } else {
+        // Online Mode: save to Supabase
+        await saveHistory(user.id, result);
+        setHistory(prev => [result, ...prev].slice(0, 50));
+        setLastResult(result);
+        setShowResultModal(true);
+        checkAchievements(result);
+        checkQuests(result);
+
+        // Update Leaderboard Score
+        const scoreIncrement = Math.max(0, currentText.length - errors);
+        if (scoreIncrement > 0) {
+          try {
+            // Ensure we have a username - prioritize handle for leaderboard identity
+            const leaderboardName = profile.handle || profile.username || user.email?.split('@')[0] || 'Pilot';
+            await supabase.rpc('update_leaderboard_score', { 
+              p_user_id: user.id, 
+              p_username: leaderboardName, 
+              p_score_increment: scoreIncrement 
+            });
+          } catch (err) {
+            console.error("Failed to update leaderboard:", err);
+          }
         }
       }
 
@@ -1811,12 +1910,20 @@ const App: React.FC = () => {
     }
 
     // Celebratory Animations
-    if (accuracy >= 95) {
+    if (confettiIntensity !== 'none' && accuracy >= 95) {
+      const multiplier = confettiIntensity === 'low' ? 0.25 : confettiIntensity === 'medium' ? 0.6 : 1.0;
+      
+      // Determine colors based on style
+      let colors: string[] | undefined = undefined;
+      if (confettiStyle === 'cosmic') colors = ['#8b5cf6', '#06b6d4', '#6366f1', '#ec4899'];
+      else if (confettiStyle === 'gold') colors = ['#fbbf24', '#f59e0b', '#d97706', '#fef08a'];
+      else if (confettiStyle === 'sakura') colors = ['#fbcfe8', '#f472b6', '#ec4899', '#fce7f3'];
+
       if (wpm >= 100) {
         // Legendary Performance
-        const duration = 5 * 1000;
+        const duration = (confettiIntensity === 'low' ? 1.5 : confettiIntensity === 'medium' ? 3 : 5) * 1000;
         const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0, colors };
 
         const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -1827,41 +1934,48 @@ const App: React.FC = () => {
             return clearInterval(interval);
           }
 
-          const particleCount = 50 * (timeLeft / duration);
+          const particleCount = (50 * (timeLeft / duration)) * multiplier;
           confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
           confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
         }, 250);
       } else if (wpm >= 60) {
         // Elite Performance
         confetti({
-          particleCount: 150,
+          particleCount: Math.round(150 * multiplier),
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#6366f1', '#ec4899', '#ffffff']
+          colors: colors || ['#6366f1', '#ec4899', '#ffffff']
         });
       } else {
         // Great Accuracy
         confetti({
-          particleCount: 80,
+          particleCount: Math.round(80 * multiplier),
           angle: 60,
           spread: 55,
           origin: { x: 0 },
-          colors: ['#10b981', '#ffffff']
+          colors: colors || ['#10b981', '#ffffff']
         });
         confetti({
-          particleCount: 80,
+          particleCount: Math.round(80 * multiplier),
           angle: 120,
           spread: 55,
           origin: { x: 1 },
-          colors: ['#10b981', '#ffffff']
+          colors: colors || ['#10b981', '#ffffff']
         });
       }
-    } else if (accuracy >= 85 && wpm >= 40) {
+    } else if (confettiIntensity !== 'none' && accuracy >= 85 && wpm >= 40) {
+      const multiplier = confettiIntensity === 'low' ? 0.25 : confettiIntensity === 'medium' ? 0.6 : 1.0;
+      let colors: string[] | undefined = undefined;
+      if (confettiStyle === 'cosmic') colors = ['#8b5cf6', '#06b6d4', '#6366f1', '#ec4899'];
+      else if (confettiStyle === 'gold') colors = ['#fbbf24', '#f59e0b', '#d97706', '#fef08a'];
+      else if (confettiStyle === 'sakura') colors = ['#fbcfe8', '#f472b6', '#ec4899', '#fce7f3'];
+
       // Good Performance
       confetti({
-        particleCount: 40,
+        particleCount: Math.round(40 * multiplier),
         spread: 50,
-        origin: { y: 0.7 }
+        origin: { y: 0.7 },
+        colors
       });
     }
 
@@ -1964,7 +2078,7 @@ const App: React.FC = () => {
     else if (targetView === AppView.CLANS) navigate('/clans');
   };
 
-  const playSound = (type: 'correct' | 'error' | 'finish' | 'click' | 'achievement') => {
+  const playSound = (type: 'correct' | 'error' | 'finish' | 'click' | 'achievement' | 'countdown_beep' | 'countdown_go') => {
     if (!soundEnabled) return;
     try {
       initAudio();
@@ -1981,6 +2095,35 @@ const App: React.FC = () => {
         bgmGain.setValueAtTime(bgmGain.value, now);
         bgmGain.linearRampToValueAtTime(0.12, now + 0.05);
         bgmGain.linearRampToValueAtTime(0.15, now + 0.3);
+      }
+
+      if (type === 'countdown_beep') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+        return;
+      } else if (type === 'countdown_go') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.25);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+        
+        try {
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.connect(gain2); gain2.connect(sfxGainRef.current || ctx.destination);
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(659.25, now);
+          osc2.frequency.exponentialRampToValueAtTime(1318.5, now + 0.25);
+          gain2.gain.setValueAtTime(0.05, now);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc2.start(now); osc2.stop(now + 0.4);
+        } catch {}
+        return;
       }
 
       if (soundProfile === SoundProfile.MECHANICAL_BLUE || soundProfile === SoundProfile.MECHANICAL_BROWN || soundProfile === SoundProfile.MECHANICAL_RED) {
@@ -2500,6 +2643,32 @@ const App: React.FC = () => {
                 )}
                 <button 
                   onClick={() => {
+                    const nextOffline = !isOffline;
+                    setIsOffline(nextOffline);
+                    if (!nextOffline) {
+                      const saved = localStorage.getItem('zippy_offline_buffer');
+                      if (saved) {
+                        try {
+                          const queue = JSON.parse(saved);
+                          if (queue.length > 0) syncOfflineBuffer(queue);
+                        } catch {}
+                      }
+                    }
+                  }}
+                  className={`px-3 py-2 border rounded-xl flex items-center gap-1.5 transition-all shadow-md shrink-0 ${
+                    isOffline 
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20 animate-pulse' 
+                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                  }`}
+                  title={isOffline ? "Practice Offline Mode (Active). Click to reconnect." : "Online Mode. Click to force Offline Practice."}
+                >
+                  {isOffline ? <WifiOff size={14} /> : <Wifi size={14} />}
+                  <span className="text-[8px] font-black uppercase tracking-wider font-mono">
+                    {isOffline ? 'Offline' : 'Online'}
+                  </span>
+                </button>
+                <button 
+                  onClick={() => {
                     const nextThemes: Record<string, string> = { light: 'dark', dark: 'midnight', midnight: 'cyberpunk', cyberpunk: 'nordic', nordic: 'sunset', sunset: 'forest', forest: 'ocean', ocean: 'light' };
                     const newTheme = nextThemes[profile.theme || 'dark'] || 'dark';
                     setProfile({ ...profile, theme: newTheme });
@@ -2747,6 +2916,10 @@ const App: React.FC = () => {
                       savePrefs(newProfile);
                     }}
                     isPro={profile.is_pro || false}
+                    confettiIntensity={confettiIntensity}
+                    setConfettiIntensity={setConfettiIntensity}
+                    confettiStyle={confettiStyle}
+                    setConfettiStyle={setConfettiStyle}
                   />
                 )}
 
@@ -2966,7 +3139,7 @@ const App: React.FC = () => {
           </div>
         ) : currentView === AppView.HISTORY ? (
           <div className="space-y-8 animate-in zoom-in-95 duration-300">
-            <WeeklyReport history={history} />
+            <WeeklyReport history={history} isPro={profile.is_pro || false} onUpgradeClick={() => setShowProModal(true)} />
             <HistoryView history={history} speedUnit={speedUnit} problemKeys={problemKeys} isPro={profile.is_pro || false} onUpgradeClick={() => setShowProModal(true)} />
           </div>
         ) : currentView === AppView.TUTORIALS ? (
@@ -3019,13 +3192,18 @@ const App: React.FC = () => {
                     { mode: GameMode.COMPETITIVE, label: "Live 1v1", desc: "Race against real players", icon: <Users /> }
                   ].map((m) => {
                     const isLocked = !user && (m.mode !== GameMode.SOLO || hasUsedSolo);
+                    const isOfflineLocked = isOffline && (m.mode === GameMode.DAILY || m.mode === GameMode.COMPETITIVE);
                     return (
                       <motion.button
                         key={m.mode}
-                        whileHover={{ scale: 1.02, translateY: -2 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={isOfflineLocked ? {} : { scale: 1.02, translateY: -2 }}
+                        whileTap={isOfflineLocked ? {} : { scale: 0.98 }}
                         disabled={isLocked && isActive}
                         onClick={() => { 
+                          if (isOfflineLocked) {
+                            alert("This game mode requires an active connection. Please switch to Online Mode in the header to play!");
+                            return;
+                          }
                           if (isLocked) { 
                             setShowRestrictedModal(true); 
                           } else if (m.mode === GameMode.CUSTOM_TEXT) {
@@ -3037,19 +3215,29 @@ const App: React.FC = () => {
                             resetGameStats(); 
                           } 
                         }}
-                        className={`relative w-48 p-4 rounded-2xl border transition-all text-left group overflow-hidden flex-shrink-0 ${gameMode === m.mode ? 'glass border-indigo-500/50 shadow-lg' : 'bg-nav-bg border-glass-border hover:border-white/10'}`}
+                        className={`relative w-48 p-4 rounded-2xl border transition-all text-left group overflow-hidden flex-shrink-0 ${
+                          isOfflineLocked 
+                            ? 'opacity-40 bg-black/10 border-white/5 cursor-not-allowed'
+                            : gameMode === m.mode 
+                            ? 'glass border-indigo-500/50 shadow-lg' 
+                            : 'bg-nav-bg border-glass-border hover:border-white/10'
+                        }`}
                       >
                         <div className={`absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
                         <div className="relative flex flex-col gap-2">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gameMode === m.mode ? 'bg-indigo-500 text-white' : 'bg-bg-deep/20 text-text-muted group-hover:text-text-main'}`}>
-                            {isLocked ? <Lock size={14} /> : m.icon}
+                            {isOfflineLocked ? <WifiOff size={14} className="text-amber-500" /> : isLocked ? <Lock size={14} /> : m.icon}
                           </div>
                           <div>
-                            <h3 className={`text-[10px] font-black uppercase tracking-widest ${gameMode === m.mode ? 'text-text-main' : 'text-text-muted'}`}>{m.label}</h3>
-                            <p className="text-[8px] font-medium text-text-muted mt-0.5 leading-tight line-clamp-1">{m.desc}</p>
+                            <h3 className={`text-[10px] font-black uppercase tracking-widest ${gameMode === m.mode ? 'text-text-main' : 'text-text-muted'}`}>
+                              {m.label}
+                            </h3>
+                            <p className="text-[8px] font-medium text-text-muted mt-0.5 leading-tight line-clamp-1">
+                              {isOfflineLocked ? "Requires internet connection" : m.desc}
+                            </p>
                           </div>
                         </div>
-                        {gameMode === m.mode && (
+                        {gameMode === m.mode && !isOfflineLocked && (
                           <motion.div layoutId="active-pill" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />
                         )}
                       </motion.button>
@@ -3653,6 +3841,25 @@ const App: React.FC = () => {
                         </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {lastResult.keySpeeds && Object.keys(lastResult.keySpeeds).length > 0 && (
+                <div className="w-full p-6 bg-black/40 border border-white/5 rounded-[2rem] text-left relative overflow-hidden">
+                  {!profile.is_pro && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 text-center">
+                      <Crown size={20} className="text-amber-500 mb-2 animate-pulse" />
+                      <h4 className="text-xs font-black text-white uppercase tracking-widest mb-1">Key Speed Heatmap</h4>
+                      <p className="text-[9px] text-slate-400 max-w-xs mb-3 leading-tight">Upgrade to ZippyType Pro to unlock real-time physical key reaction speed heatmaps.</p>
+                      <button 
+                        onClick={() => { setShowResultModal(false); setShowProModal(true); }}
+                        className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black rounded-lg text-[8px] uppercase tracking-widest transition-all shadow-md shadow-orange-500/20"
+                      >
+                        Unlock with Pro
+                      </button>
+                    </div>
+                  )}
+                  <KeyHeatmap keySpeeds={lastResult.keySpeeds} />
                 </div>
               )}
 

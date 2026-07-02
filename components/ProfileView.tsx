@@ -80,6 +80,92 @@ const ProfileView: React.FC<ProfileViewProps> = ({
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get a Set of YYYY-MM-DD dates with at least one race
+  const completedDates = React.useMemo(() => {
+    const dates = new Set<string>();
+    userHistory.forEach(r => {
+      if (r.date) {
+        try {
+          const d = new Date(r.date);
+          const yyyymmdd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          dates.add(yyyymmdd);
+        } catch {}
+      }
+    });
+    return dates;
+  }, [userHistory]);
+
+  // Calculate current daily streak
+  const dailyStreak = React.useMemo(() => {
+    let streakCount = 0;
+    
+    const formatDate = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    let checkDate = new Date();
+    let todayStr = formatDate(checkDate);
+    
+    // Check if user did at least one race today
+    let hasRacedToday = completedDates.has(todayStr);
+    
+    if (hasRacedToday) {
+      streakCount = 1;
+      // Step backwards from yesterday
+      while (true) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        const checkStr = formatDate(checkDate);
+        if (completedDates.has(checkStr)) {
+          streakCount++;
+        } else {
+          break;
+        }
+      }
+    } else {
+      // Check if they raced yesterday
+      checkDate.setDate(checkDate.getDate() - 1);
+      const yesterdayStr = formatDate(checkDate);
+      if (completedDates.has(yesterdayStr)) {
+        streakCount = 1;
+        // Step backwards from day before yesterday
+        while (true) {
+          checkDate.setDate(checkDate.getDate() - 1);
+          const checkStr = formatDate(checkDate);
+          if (completedDates.has(checkStr)) {
+            streakCount++;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+    
+    return streakCount;
+  }, [completedDates]);
+
+  // Get list of last 21 days for the visual calendar grid
+  const calendarDays = React.useMemo(() => {
+    const days = [];
+    const formatDate = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    // Go back 20 days + today = 21 days
+    for (let i = 20; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = formatDate(d);
+      days.push({
+        dateStr,
+        dayNum: d.getDate(),
+        dayLabel: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
+        isToday: i === 0,
+        completed: completedDates.has(dateStr),
+      });
+    }
+    return days;
+  }, [completedDates]);
+
   useEffect(() => {
     if (!isOwnProfile) {
       fetchPublicProfile();
@@ -357,6 +443,67 @@ const ProfileView: React.FC<ProfileViewProps> = ({
 
         <div className="space-y-8">
           {isOwnProfile && <DailyQuests quests={profile.quests || []} />}
+
+          {/* Daily Streak Tracker Card */}
+          <div className="glass rounded-[2rem] p-8 border border-white/10 shadow-xl space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+              <Zap size={80} className="text-amber-500" />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Zap size={20} className="text-amber-500 animate-pulse" />
+              <h3 className="text-sm font-black text-white uppercase tracking-widest">Daily Streak Tracker</h3>
+            </div>
+
+            <div className="flex items-center gap-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4">
+              <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl text-white shadow-lg shadow-orange-500/20">
+                <span className="text-2xl font-black italic">
+                  {dailyStreak}
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-black text-white uppercase tracking-widest block">
+                  {dailyStreak === 1 ? 'Day Streak' : 'Days Streak'}
+                </span>
+                <p className="text-[8px] text-slate-400 leading-tight">
+                  {dailyStreak > 0 
+                    ? `Awesome job! Keep racing daily to protect your active ${dailyStreak}-day streak!` 
+                    : "Complete at least one typing race today to launch your new daily streak!"}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Last 21 Days</span>
+                <span className="text-[9px] font-mono text-amber-500 font-bold">{Array.from(completedDates).length} active days</span>
+              </div>
+
+              {/* 3 weeks Contribution Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, idx) => (
+                  <div 
+                    key={day.dateStr} 
+                    className="flex flex-col items-center justify-center gap-1"
+                    title={`${day.dateStr}${day.completed ? ' (Completed Race)' : ' (No Race)'}`}
+                  >
+                    <div 
+                      className={`w-7 h-7 rounded-lg text-[9px] font-black flex items-center justify-center transition-all ${
+                        day.completed 
+                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/10 scale-105 border border-emerald-400/20' 
+                          : day.isToday
+                            ? 'bg-slate-800 border-2 border-indigo-500 text-indigo-400'
+                            : 'bg-black/25 text-slate-600 border border-white/5'
+                      }`}
+                    >
+                      {day.dayNum}
+                    </div>
+                    <span className="text-[7px] text-slate-500 font-bold font-mono uppercase">{day.dayLabel}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           
           <div className="glass rounded-[2rem] p-8 border border-white/10 shadow-xl space-y-6">
             <div className="flex items-center gap-3">

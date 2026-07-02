@@ -5,9 +5,11 @@ import { Activity, TrendingUp, Target, Clock } from 'lucide-react';
 
 interface WeeklyReportProps {
   history: TypingResult[];
+  isPro?: boolean;
+  onUpgradeClick?: () => void;
 }
 
-const WeeklyReport: React.FC<WeeklyReportProps> = ({ history }) => {
+const WeeklyReport: React.FC<WeeklyReportProps> = ({ history, isPro = false, onUpgradeClick }) => {
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   
@@ -28,6 +30,24 @@ const WeeklyReport: React.FC<WeeklyReportProps> = ({ history }) => {
 
   return (
     <div className="space-y-6 p-8 glass border border-white/10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+      {!isPro && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md p-6 text-center">
+          <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl mb-3 border border-amber-500/20">
+            <TrendingUp size={24} />
+          </div>
+          <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1.5">Weekly Performance Reports</h4>
+          <p className="text-[10px] text-slate-400 max-w-sm mb-4 leading-relaxed">
+            Upgrade to ZippyType Pro to get comprehensive performance audits, speed trends, and word count statistics over your last 7 days.
+          </p>
+          <button 
+            onClick={onUpgradeClick}
+            className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-black rounded-xl text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-orange-500/20 hover:scale-105 active:scale-95"
+          >
+            Unlock with Pro
+          </button>
+        </div>
+      )}
+
       <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
         <Activity size={120} />
       </div>

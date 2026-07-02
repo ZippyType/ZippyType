@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, Layout, Globe, X, Sparkles, Link2, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Volume2, Layout, Globe, X, Sparkles, Link2, CheckCircle2, Sun, Moon, Eye, Crown } from 'lucide-react';
 import { SoundProfile, KeyboardLayout } from '../../types';
 import { useTranslation } from '../../src/LanguageContext';
 
@@ -38,6 +38,10 @@ interface GeneralSettingsProps {
   theme: string;
   setTheme: (t: string) => void;
   isPro: boolean;
+  confettiIntensity: 'none' | 'low' | 'medium' | 'high';
+  setConfettiIntensity: (v: 'none' | 'low' | 'medium' | 'high') => void;
+  confettiStyle: 'classic' | 'cosmic' | 'gold' | 'sakura';
+  setConfettiStyle: (v: 'classic' | 'cosmic' | 'gold' | 'sakura') => void;
 }
 
 const languages = [
@@ -83,7 +87,11 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
   triggerOldBrowser,
   theme,
   setTheme,
-  isPro
+  isPro,
+  confettiIntensity,
+  setConfettiIntensity,
+  confettiStyle,
+  setConfettiStyle
 }) => {
   const { t, currentLang, setLanguage, loading } = useTranslation();
   const [showLangModal, setShowLangModal] = useState(false);
@@ -378,6 +386,77 @@ const GeneralSettings: React.FC<GeneralSettingsProps> = ({
             >
               <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${saveReplays ? 'left-6' : 'left-1'}`} />
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 glass border border-white/10 rounded-2xl space-y-6">
+        <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+          <Eye size={14} className="text-emerald-400" /> Accessibility & Celebrations
+        </h3>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confetti Intensity</span>
+              <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">{confettiIntensity}</span>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-tight">Reduce or disable confetti particle animations upon completing a race to suit your comfort or system speed.</p>
+            <div className="grid grid-cols-4 gap-2 pt-1">
+              {(['none', 'low', 'medium', 'high'] as const).map((intensity) => (
+                <button
+                  key={intensity}
+                  onClick={() => {
+                    setConfettiIntensity(intensity);
+                    localStorage.setItem('confetti_intensity', intensity);
+                  }}
+                  className={`py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${
+                    confettiIntensity === intensity
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-500/10'
+                      : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10 hover:text-slate-300'
+                  }`}
+                >
+                  {intensity}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-white/5">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confetti Theme Style</span>
+              <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                {confettiStyle === 'classic' ? 'classic' : `${confettiStyle} ✨`}
+              </span>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-tight">Change the color palette of completion animations. Themes other than Classic are premium Pro benefits.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {(['classic', 'cosmic', 'gold', 'sakura'] as const).map((style) => {
+                const isStylePro = style !== 'classic';
+                const isLocked = isStylePro && !isPro;
+                return (
+                  <button
+                    key={style}
+                    onClick={() => {
+                      if (isLocked) {
+                        triggerPayment();
+                      } else {
+                        setConfettiStyle(style);
+                        localStorage.setItem('confetti_style', style);
+                      }
+                    }}
+                    className={`py-2 px-1 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-1 ${
+                      confettiStyle === style
+                        ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-500/10'
+                        : 'bg-black/20 text-slate-500 border-white/5 hover:border-white/10 hover:text-slate-300'
+                    }`}
+                  >
+                    {style}
+                    {isLocked && <Crown size={10} className="text-amber-500 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
